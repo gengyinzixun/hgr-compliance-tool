@@ -1,5 +1,7 @@
 # 人类遗传资源申报备案评估工具（HGR Compliance Tool）
 
+[![rules-test](https://github.com/zrzbpsrpkw-hash/hgr-compliance-tool/actions/workflows/rules-test.yml/badge.svg)](https://github.com/zrzbpsrpkw-hash/hgr-compliance-tool/actions/workflows/rules-test.yml)
+
 基于规则引擎的中国人类遗传资源（HGR）行政许可 / 备案 / 事先报告智能评估工具原型。回答 10–15 道分层问题，即可判断项目需要哪条申报路径，并生成带条款引用、置信度分级、后续义务时限与罚则提示的评估报告（可导出 Word）。
 
 > ⚠️ **免责声明**：本工具为产品原型，所有输出均为基于公开法规的自动化初步评估，**不构成法律意见**。重大决策请核对法规原文并咨询主管部门或专业律师。
