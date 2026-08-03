@@ -111,5 +111,44 @@ check('多中心提示',
   if (!qs2.includes('unit_type') && qs2.includes('ch_track')) { pass++; console.log('PASS 变更流程题目隔离') } else { fail++; console.log('FAIL 流程隔离') }
 }
 
+// ── 第二轮：对抗性边界用例 ──
+function expect2(name: string, answers: any, must: string[], mustNot: string[] = []) {
+  const got = evaluate(answers).conclusions.map((c) => c.id)
+  const ok = must.every((m) => got.includes(m)) && !mustNot.some((m) => got.includes(m))
+  if (ok) { pass++; console.log(`PASS ${name}`) }
+  else { fail++; console.log(`FAIL ${name}\n  got: ${got.join(', ')}\n  want: +[${must}] -[${mustNot}]`) }
+}
+
+// A1 仅临床/影像数据 → 不纳入
+expect2('A1 仅临床数据', { unit_type: 'chinese', resource_kind: 'info_only', info_type: ['clinical', 'imaging'] }, ['out-of-scope'])
+// A2 已公开数据对外提供 → 豁免，不出事先报告
+expect2('A2 已公开数据', { unit_type: 'chinese', resource_kind: 'info_only', info_type: ['gene'], activities: ['info_out'], info_public: 'yes' }, ['info-exempt-public'], ['info-report'])
+// A3 上市临床试验+出境 → 应审批而非备案
+expect2('A3 备案路径+出境', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['whole_blood'], activities: ['coop', 'export'], coop_role: 'substantial', coop_purpose: 'yes', coop_insite: 'yes', coop_exploratory: 'no', export_only_exempt: 'no' }, ['coop-approval', 'export-approval'], ['coop-filing'])
+// A4 备案+探索性 → 备案与探索性审批并存
+expect2('A4 备案+探索性', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['whole_blood'], activities: ['coop'], coop_role: 'substantial', coop_purpose: 'yes', coop_insite: 'yes', coop_exploratory: 'yes' }, ['coop-filing', 'coop-exploratory'])
+// A5 >3000例但上市临床试验 → 采集豁免，不出采集许可
+expect2('A5 大规模采集临床试验豁免', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['whole_blood'], activities: ['collect'], collect_family: 'no', collect_region: 'no', collect_scale: 'yes', collect_ctrial: 'yes' }, ['collect-exempt-ctrial'], ['collect-approval'])
+// A6 采集+国际合作 → 采集被吸收（以 notice 形式提示，不独立要求许可）
+expect2('A6 采集被国合吸收', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['whole_blood'], activities: ['collect', 'coop'], collect_family: 'yes', collect_region: 'no', collect_scale: 'no', coop_role: 'substantial', coop_purpose: 'no' }, ['coop-approval', 'collect-approval'])
+// A7 临时存储 → 不构成保藏
+expect2('A7 临时存储', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['tissue'], activities: ['bank'], bank_purpose: 'yes' }, ['bank-exempt'], ['bank-approval'])
+// A8 外方+出境 → 禁止，不出出境审批
+expect2('A8 外方出境', { unit_type: 'foreign', resource_kind: 'material_only', material_type: ['cells'], activities: ['export'] }, ['foreign-prohibited'], ['export-approval'])
+// A9 变更混合（重大+10%以内）→ 就高：变更审批 + 书面说明提示并存
+expect2('A9 变更混合就高', { _flow: 'existing', ch_track: 'approval_coop', ch_unit_foreign: 'no', ch_convert: 'none', ch_items_coop: ['hgr_change', 'qty_within_10'] }, ['ch-coop-variation', 'ch-coop-notice'])
+// A10 备案重大事项+不涉及人遗方案变更 → 备案变更 + 书面说明并存
+expect2('A10 备案变更混合', { _flow: 'existing', ch_track: 'filing_trial', ch_unit_foreign: 'no', ch_convert: 'none', ch_items_filing: ['major', 'plan_no_hgr'] }, ['ch-filing-variation', 'ch-filing-notice'])
+// A11 协议内信息共享 → 豁免，不出事先报告
+expect2('A11 协议内共享', { unit_type: 'chinese', resource_kind: 'info_only', info_type: ['gene'], activities: ['info_out'], info_public: 'no', info_within_coop: 'yes' }, ['info-exempt-coop'], ['info-report'])
+// A12 身份判定：股权<50且无实控 → 中方，不出禁止结论
+expect2('A12 实控判定中方', { unit_type: 'unsure', foreign_stake: 'no', foreign_control: 'no', resource_kind: 'material_only', material_type: ['whole_blood'], activities: ['collect'], collect_family: 'no', collect_region: 'no', collect_scale: 'no' }, ['collect-exempt-general'], ['foreign-prohibited'])
+// A13 仅服务方为外方 → 豁免，不出备案/审批
+expect2('A13 EDC豁免', { unit_type: 'chinese', resource_kind: 'both', material_type: ['whole_blood'], info_type: ['gene'], activities: ['coop'], coop_role: 'service_only' }, ['coop-exempt'], ['coop-filing', 'coop-approval'])
+// A14 仅尿/血浆出境 → 资源层即判定不纳入（结论等价于出境豁免，且不得出现出境审批）
+expect2('A14 豁免材料出境', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['urine', 'plasma'], activities: ['export'], export_only_exempt: 'yes' }, ['out-of-scope'], ['export-approval'])
+// A15 采集许可仅名称变更 → 变更审批（FAQ口径）
+expect2('A15 采集名称变更', { _flow: 'existing', ch_track: 'approval_collect', ch_unit_foreign: 'no', ch_convert: 'none', ch_items_collect: ['name_only'] }, ['ch-approval_collect-variation'])
+
 console.log(`\n${pass} passed, ${fail} failed`)
 if (fail > 0) process.exit(1)
