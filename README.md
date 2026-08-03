@@ -55,6 +55,7 @@ npm install
 npm run dev        # 开发服务器 http://localhost:3000
 npm run build      # 生产构建 → dist/
 npm run test:rules # 规则引擎冒烟测试（19 条典型路径回归）
+npm run screenshots # 重截 README 预览图（首次需 npx playwright install chromium）
 ```
 
 ## 项目结构
@@ -72,7 +73,10 @@ src/
 │   └── exportDocx.ts    # Word 报告导出
 └── pages/Home.tsx       # 入口与流程编排
 docs/
-└── background/          # 背景文档：中方/外方单位合规操作流程指引
+├── background/          # 背景文档：中方/外方单位合规操作流程指引
+└── screenshots/         # README 界面预览图（npm run screenshots 重新生成）
+scripts/
+└── screenshots.mjs      # 截图脚本：自动启停 dev server 并重截预览图
 smoke-test.mts           # 规则引擎冒烟测试（npm run test:rules）
 ```
 
