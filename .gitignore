@@ -22,3 +22,6 @@ npm-debug.log*
 .env
 .env.*
 !.env.example
+
+# Internal docs (third-party copyright, keep local only)
+docs/background/
