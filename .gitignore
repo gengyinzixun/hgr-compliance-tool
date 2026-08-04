@@ -23,5 +23,6 @@ npm-debug.log*
 .env.*
 !.env.example
 
-# Internal docs (third-party copyright, keep local only)
+# Internal docs (third-party copyright / local machine info, keep local only)
 docs/background/
+docs/下一轮更新交接.md
