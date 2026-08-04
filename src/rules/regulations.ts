@@ -11,7 +11,7 @@
  */
 
 /** 规则库版本快照：每次依据新法规/新口径更新规则后递增并更新复核日期 */
-export const RULESET_VERSION = '1.4.0'
+export const RULESET_VERSION = '1.5.0'
 export const RULESET_REVIEWED_AT = '2026-08-04'
 
 export type RegulationStatus =
@@ -89,7 +89,7 @@ export const REGULATIONS: Record<string, RegulationMeta> = {
     effective: '2025-04-01',
     status: 'current',
     statusNote:
-      '之一 2025-04-01（商业化人源细胞系）、之二 2025-04-09（CDX/PDX）、之三 2025-04-17（CAR-T 出境）、之四 2025-04-25（空白基质国际合作）、之五 2025-10-11（申报数量、延续时限）。2026-08-04 完成逐条比对：之五 2 条已落地为义务增强；之一至之四为监管范围类口径，规则库无冲突，是否入题库待后续评估。详见 docs/问题解答之一至之五-比对报告.md。',
+      '之一 2025-04-01（商业化人源细胞系）、之二 2025-04-09（CDX/PDX）、之三 2025-04-17（CAR-T 出境）、之四 2025-04-25（空白基质国际合作）、之五 2025-10-11（申报数量、延续时限）。2026-08-04 完成逐条比对并全部落地：之五 2 条为义务文案增强（v1.4.0）；之一/之二落地为题库 cells_deidentified 分支与 out-of-scope 专用结论，之三落地为 export-exempt-clinical 豁免结论，之四补入国际合作题目帮助文案（v1.5.0）。详见 docs/问题解答之一至之五-比对报告.md。',
   },
   practice: {
     id: 'practice',

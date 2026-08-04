@@ -157,5 +157,20 @@ expect2('A17 血清直接取得', { unit_type: 'chinese', resource_kind: 'materi
 const sga = evaluate({ unit_type: 'chinese', resource_kind: 'material_only', material_type: ['plasma'], serum_origin: 'unclear' })
 if (sga.grayAreas.some((g) => g.question.includes('血清'))) { pass++; console.log('PASS A18 血清来源灰色地带') } else { fail++; console.log('FAIL A18 血清来源应进灰色地带') }
 
+// ── 第四轮：《问题解答》之一至之四落地用例 ──
+// A19 去标识商业化永生化细胞系 → 不纳入管理（之一）
+expect2('A19 去标识细胞系豁免', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['cells'], cells_deidentified: 'yes' }, ['out-of-scope'])
+// A20 可溯源细胞 / PDX → 纳入受监管材料，采集活动按常规评估（之一/之二反向）
+expect2('A20 可溯源细胞纳入', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['cells'], cells_deidentified: 'no', activities: ['collect'], collect_family: 'no', collect_region: 'no', collect_scale: 'no' }, ['collect-exempt-general'], ['out-of-scope'])
+// A21 细胞系是否去标识不清楚 → 灰色地带转人工
+const cga = evaluate({ unit_type: 'chinese', resource_kind: 'material_only', material_type: ['cells'], cells_deidentified: 'unclear' })
+if (cga.grayAreas.some((g) => g.question.includes('细胞'))) { pass++; console.log('PASS A21 细胞系去标识灰色地带') } else { fail++; console.log('FAIL A21 细胞系去标识不清楚应进灰色地带') }
+// A22 CDX 模型出境 → 资源层即不纳入，不出出境审批（之二）
+expect2('A22 CDX出境不纳入', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['cells'], cells_deidentified: 'yes', activities: ['export'], export_clinical_care: 'no', export_only_exempt: 'no' }, ['out-of-scope'], ['export-approval'])
+// A23 CAR-T 临床诊疗目的出境 → 出境豁免，不出出境审批（之三）
+expect2('A23 CART诊疗出境豁免', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['cells'], cells_deidentified: 'no', activities: ['export'], export_clinical_care: 'yes' }, ['export-exempt-clinical'], ['export-approval'])
+// A24 科研目的细胞出境 → 仍需出境审批（之三反向，验证新题不破坏原路径）
+expect2('A24 科研出境仍审批', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['cells'], cells_deidentified: 'no', activities: ['export'], export_clinical_care: 'no', export_only_exempt: 'no' }, ['export-approval'], ['export-exempt-clinical'])
+
 console.log(`\n${pass} passed, ${fail} failed`)
 if (fail > 0) process.exit(1)

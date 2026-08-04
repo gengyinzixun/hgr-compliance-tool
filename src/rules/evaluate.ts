@@ -72,6 +72,7 @@ export function evaluate(a: Answers): EvalResult {
     ['collect_scale', '采集人数是否大于 3000 例'],
     ['coop_insite', '检测分析是否全部在境内指定单位进行'],
     ['serum_origin', '血清 / 血浆是否由本项目采集的全血处理获得'],
+    ['cells_deidentified', '细胞 / 细胞系是否全部为去标识、无法追溯至个人的商业化永生化细胞系'],
   ]
   for (const [id, label] of unclearMap) {
     if (get(a, id) === 'unclear') {
@@ -81,20 +82,25 @@ export function evaluate(a: Answers): EvalResult {
 
   // ── 资源不在管理范围 ──
   if (!regM && !regI) {
+    const deidCells = getMulti(a, 'material_type').includes('cells') && get(a, 'cells_deidentified') === 'yes'
     push({
       id: 'out-of-scope',
       type: 'exempt',
       title: '现有信息下，项目对象原则上不纳入人类遗传资源管理',
-      summary: onlyExemptM
-        ? '尿液、粪便、血清、血浆等仅含极少量脱落/游离细胞或基因的样本，以及不含细胞的人体分泌物、体液、拭子，不纳入人遗材料管理范围；单纯的临床、影像、蛋白质、代谢数据不属于人遗信息。'
-        : '所选对象不属于人遗材料或人遗信息的管理范围。',
+      summary: deidCells
+        ? '已去除样本相关信息、无法追溯至个人的用于生产或科学研究的永生化细胞系，不纳入人类遗传资源监管范围；细胞系来源的小鼠移植模型（CDX）亦不属于人遗材料。'
+        : onlyExemptM
+          ? '尿液、粪便、血清、血浆等仅含极少量脱落/游离细胞或基因的样本，以及不含细胞的人体分泌物、体液、拭子，不纳入人遗材料管理范围；单纯的临床、影像、蛋白质、代谢数据不属于人遗信息。'
+          : '所选对象不属于人遗材料或人遗信息的管理范围。',
       citations: [
         A('第二条'),
         X('第二条'),
-        F('第四部分第 1 问：尿液、粪便、血清、血浆等材料不再纳入人遗材料管理范围'),
+        ...(deidCells
+          ? [F25s('之一：已去除样本相关信息、无法追溯至个人的永生化细胞系不纳入监管'), F25s('之二：CDX 不属于人遗材料')]
+          : [F('第四部分第 1 问：尿液、粪便、血清、血浆等材料不再纳入人遗材料管理范围')]),
       ],
       obligations: [],
-      reasons: ['资源识别：未发现受监管的人遗材料或人遗信息'],
+      reasons: deidCells ? ['资源识别：细胞 / 细胞系全部为去标识、不可追溯的商业化永生化细胞系（含 CDX）'] : ['资源识别：未发现受监管的人遗材料或人遗信息'],
       risk: '注意：若使用上述样本进行基因、基因组、转录组、表观组及核酸类生物标志物检测，产生的人遗信息在涉及国际合作、信息对外提供或开放使用时，仍纳入相应许可 / 备案 / 事先报告管理。',
     })
     if (regI || get(a, 'resource_kind') !== 'material_only') {
@@ -347,7 +353,18 @@ export function evaluate(a: Answers): EvalResult {
 
   // ── 材料出境 ──
   if (has(a, 'activities', 'export') && unit !== 'foreign') {
-    if (get(a, 'export_only_exempt') === 'yes') {
+    if (get(a, 'export_clinical_care') === 'yes') {
+      push({
+        id: 'export-exempt-clinical',
+        type: 'exempt',
+        title: '材料出境豁免：以临床诊疗为目的的 CAR-T 治疗 / 基因检测相关材料出境无需申报',
+        summary: '以临床诊疗为目的的嵌合抗原受体 T 细胞（CAR-T）治疗或基因检测相关材料出境，无需申报人类遗传资源材料出境行政许可。',
+        citations: [F25s('之三：以临床诊疗为目的的 CAR-T 治疗或基因检测相关材料出境，无需申报人遗材料出境行政许可')],
+        obligations: [],
+        reasons: ['出境目的：临床诊疗'],
+        risk: '注意：该豁免仅限临床诊疗目的；相关材料若同时用于科学研究（含国际合作研究）或产生的人遗信息对外提供，仍须按相应轨道申报。',
+      })
+    } else if (get(a, 'export_only_exempt') === 'yes') {
       push({
         id: 'export-exempt',
         type: 'exempt',

@@ -27,8 +27,10 @@ export function deriveRegulatedMaterial(a: Answers): boolean {
   const m = getMulti(a, 'material_type')
   // 2025.03 FAQ 四、3：血清/血浆由本项目采集的全血处理获得的，按全血（受监管材料）申报
   if ((m.includes('serum') || m.includes('plasma')) && get(a, 'serum_origin') === 'from_whole_blood') return true
-  const regulated = ['whole_blood', 'tissue', 'cells', 'semen', 'csf', 'effusion', 'smear', 'hair']
-  return m.some((x) => regulated.includes(x))
+  // 《问题解答》之一/之二：已去除样本相关信息、无法追溯至个人的永生化细胞系（含 CDX）不纳入监管
+  const cellsRegulated = m.includes('cells') && get(a, 'cells_deidentified') !== 'yes'
+  const regulated = ['whole_blood', 'tissue', 'semen', 'csf', 'effusion', 'smear', 'hair']
+  return cellsRegulated || m.some((x) => regulated.includes(x))
 }
 
 /** 是否涉及受监管的人遗信息 */
@@ -40,7 +42,7 @@ export function deriveRegulatedInfo(a: Answers): boolean {
   return m.some((x) => regulated.includes(x))
 }
 
-/** 是否仅有豁免材料（尿/粪/血清/血浆/无细胞分泌物） */
+/** 是否仅有豁免材料（尿/粪/血清/血浆/无细胞分泌物/去标识永生化细胞系） */
 export function deriveOnlyExemptMaterial(a: Answers): boolean {
   const kind = get(a, 'resource_kind')
   if (kind === 'info_only') return false
@@ -49,7 +51,8 @@ export function deriveOnlyExemptMaterial(a: Answers): boolean {
   // 血清/血浆来源于本项目采集全血的，按全血申报，不属于豁免材料
   if ((m.includes('serum') || m.includes('plasma')) && get(a, 'serum_origin') === 'from_whole_blood') return false
   const exempt = ['urine', 'feces', 'serum', 'plasma', 'acellular']
-  return m.every((x) => exempt.includes(x))
+  // 《问题解答》之一/之二：去标识、不可追溯的永生化细胞系（含 CDX）视同豁免材料
+  return m.every((x) => exempt.includes(x) || (x === 'cells' && get(a, 'cells_deidentified') === 'yes'))
 }
 
 const L1 = '第 1 层 · 身份识别'
@@ -135,7 +138,7 @@ export const questions: Question[] = [
     options: [
       { value: 'whole_blood', label: '全血' },
       { value: 'tissue', label: '组织 / 组织切片' },
-      { value: 'cells', label: '细胞（含细胞系）' },
+      { value: 'cells', label: '细胞（含细胞系）', hint: '去标识、不可追溯的商业化永生化细胞系 / CDX 不纳入监管' },
       { value: 'semen', label: '精液' },
       { value: 'csf', label: '脑脊液' },
       { value: 'effusion', label: '胸 / 腹腔积液' },
@@ -162,6 +165,20 @@ export const questions: Question[] = [
     options: [
       { value: 'from_whole_blood', label: '是，由本项目采集的全血处理获得', hint: '按全血申报，纳入受监管材料' },
       { value: 'direct', label: '否，直接以血清 / 血浆形式取得或使用', hint: '维持豁免口径' },
+      { value: 'unclear', label: '不清楚' },
+    ],
+  },
+  {
+    id: 'cells_deidentified',
+    layer: 2,
+    layerLabel: L2,
+    text: '项目涉及的细胞 / 细胞系，是否全部为已去除样本相关信息、无法追溯至个人的商业化永生化细胞系（含 CDX 模型所用细胞系）？',
+    help: '按卫健委《问题解答》之一、之二：已去除样本相关信息、无法追溯至个人的用于生产或科学研究的永生化细胞系不纳入监管；细胞系来源的小鼠移植模型（CDX）不属于人遗材料；患者肿瘤组织来源的小鼠移植模型（PDX）属于人遗材料，其出境须申报出境许可。',
+    terms: ['immortalized_cell_line'],
+    when: (a) => getMulti(a, 'material_type').includes('cells'),
+    options: [
+      { value: 'yes', label: '是，全部为去标识、不可追溯的商业化永生化细胞系 / CDX', hint: '不纳入人遗监管范围' },
+      { value: 'no', label: '否，含原代细胞、可溯源至个人的细胞或 PDX 模型', hint: '纳入受监管材料' },
       { value: 'unclear', label: '不清楚' },
     ],
   },
@@ -280,7 +297,7 @@ export const questions: Question[] = [
     layer: 4,
     layerLabel: L4,
     text: '外方在项目中的参与方式是？',
-    help: '外方仅提供研究用药或部分经费、不获取数据、不共享成果的，不纳入国际合作管理；仅 EDC 供应商等服务商为外方的，也不需要申报。',
+    help: '外方仅提供研究用药或部分经费、不获取数据、不共享成果的，不纳入国际合作管理；仅 EDC 供应商等服务商为外方的，也不需要申报。涉及人遗空白基质的国际合作科学研究允许开展，但须提供完备研究方案、明确研究目的、合理样本量测算依据，且中方单位实质性参与并分享权益（卫健委《问题解答》之四）。',
     when: (a) => has(a, 'activities', 'coop'),
     options: [
       { value: 'substantial', label: '外方实质性参与研究（获取数据 / 共享成果 / 共同实施）' },
@@ -340,12 +357,24 @@ export const questions: Question[] = [
   },
   // —— 材料出境 ——
   {
+    id: 'export_clinical_care',
+    layer: 4,
+    layerLabel: L4,
+    text: '材料出境是否以临床诊疗为目的（如 CAR-T 治疗、基因检测相关材料为诊疗目的出境）？',
+    help: '按卫健委《问题解答》之三：以临床诊疗为目的的 CAR-T 治疗或基因检测相关材料出境，无需申报人遗材料出境行政许可。以科学研究（含国际合作研究）为目的的出境不在此豁免范围。',
+    when: (a) => has(a, 'activities', 'export'),
+    options: [
+      { value: 'yes', label: '是，以临床诊疗为目的', hint: '无需申报出境许可' },
+      { value: 'no', label: '否，以科学研究等为目的' },
+    ],
+  },
+  {
     id: 'export_only_exempt',
     layer: 4,
     layerLabel: L4,
     text: '出境材料是否仅涉及尿液、粪便、血清或血浆？',
     help: '按主管部门常见问题解答口径，上述材料不再纳入人遗材料管理范围，其出境无需申报。',
-    when: (a) => has(a, 'activities', 'export'),
+    when: (a) => has(a, 'activities', 'export') && get(a, 'export_clinical_care') !== 'yes',
     options: [
       { value: 'yes', label: '是（仅上述材料）' },
       { value: 'no', label: '否（还涉及其他材料）' },

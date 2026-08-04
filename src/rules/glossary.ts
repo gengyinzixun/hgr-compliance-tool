@@ -17,7 +17,7 @@ export interface GlossaryTerm {
   /** 条款出处 */
   source: string
   /** 关联法规注册表 */
-  regulationId: 'tiaoli' | 'xize' | 'faq' | 'faq2025'
+  regulationId: 'tiaoli' | 'xize' | 'faq' | 'faq2025' | 'faq2025s'
 }
 
 export const GLOSSARY: Record<string, GlossaryTerm> = {
@@ -107,6 +107,14 @@ export const GLOSSARY: Record<string, GlossaryTerm> = {
     source: '《人类遗传资源管理常见问题解答》（2025.03）第四部分第 3 问',
     regulationId: 'faq2025',
   },
+  immortalized_cell_line: {
+    id: 'immortalized_cell_line',
+    term: '永生化细胞系 / CDX / PDX（监管口径）',
+    definition:
+      '已去除样本相关信息、无法追溯至个人的用于生产或科学研究的永生化细胞系，不纳入人类遗传资源监管范围。细胞系来源的小鼠移植模型（Cell-derived Xenograft，CDX）不属于人类遗传资源材料；患者肿瘤组织来源的小鼠移植模型（Patient-derived tumor Xenograft，PDX）属于人类遗传资源材料，如涉及 PDX 模型出境，应申报人类遗传资源材料出境行政许可。',
+    source: '《人类遗传资源管理有关问题解答》之一、之二',
+    regulationId: 'faq2025s',
+  },
   analysis_unit: {
     id: 'analysis_unit',
     term: '分析单位',
@@ -143,6 +151,7 @@ export function relevantTerms(a: Answers): GlossaryTerm[] {
   }
   if (a.unit_type === 'unsure') ids.add('actual_control')
   if (m.includes('serum') || m.includes('plasma') || m.includes('whole_blood')) ids.add('third_party_lab')
+  if (m.includes('cells')) ids.add('immortalized_cell_line')
   if (acts.includes('collect')) {
     ids.add('key_pedigree')
     ids.add('specific_region')
