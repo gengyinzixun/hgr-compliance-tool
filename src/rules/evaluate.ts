@@ -14,12 +14,14 @@ const TIAOLI = '《中华人民共和国人类遗传资源管理条例》（2024
 const XIZE = '《人类遗传资源管理条例实施细则》（2023）'
 const FAQ = '《人类遗传资源管理常见问题解答》（2023.09）'
 const FAQ2025 = '《人类遗传资源管理常见问题解答》（2025.03）'
+const FAQ2025S = '《人类遗传资源管理有关问题解答》之一至之五（2025）'
 const NOTE_MOST = '原发文机关为科技部；2023 年机构改革后，人类遗传资源监管职责已划转国家卫生健康委员会（国家卫健委），申报办理以国家卫健委政务服务平台现行口径为准。'
 
 const A = (article: string, note?: string): Citation => ({ source: TIAOLI, article, confidence: 'A', note, regulationId: 'tiaoli' })
 const X = (article: string): Citation => ({ source: XIZE, article, confidence: 'A', note: NOTE_MOST, regulationId: 'xize' })
 const F = (topic: string): Citation => ({ source: FAQ, article: topic, confidence: 'B', note: NOTE_MOST, regulationId: 'faq' })
 const F25 = (topic: string): Citation => ({ source: FAQ2025, article: topic, confidence: 'B', regulationId: 'faq2025' })
+const F25s = (topic: string): Citation => ({ source: FAQ2025S, article: topic, confidence: 'B', regulationId: 'faq2025s' })
 const P = (topic: string): Citation => ({ source: '实务操作惯例', article: topic, confidence: 'C', note: '非法规明文规定，系申报实践中的通行做法，建议重大事项与主管部门沟通确认。', regulationId: 'practice' })
 
 export interface EvalResult {
@@ -174,7 +176,7 @@ export function evaluate(a: Answers): EvalResult {
           : [
               { title: '申请条件自查', deadline: '申报前：法人资格、目的合法、方案合理、伦理审查通过、管理制度、场所设施人员（条例第十一条）', citations: [A('第十一条')] },
               { title: '重大事项变更申请', deadline: '采集参与单位、目的、方案或内容等重大事项变更时，向主管部门提出变更申请', citations: [X('第四十四条')] },
-              { title: '许可延续', deadline: '有效期届满 30 个工作日前提出延续申请', citations: [X('第五十五条')] },
+              { title: '许可延续', deadline: '有效期届满 30 个工作日前提出延续申请；逾期提出的，主管部门不予受理', citations: [X('第五十五条'), F25s('之五第 2 问：延续行政许可或备案有效期须在届满 30 个工作日前提出申请，逾期将不予受理')] },
               { title: '参与单位伦理文件', deadline: '多中心采集：各参与医疗卫生机构将本单位伦理审查批件（或认可证明）及承诺书提交主管部门后方可开展采集', citations: [F('第一部分第 6 问')] },
             ],
         reasons: [`触发情形：${triggers.join('、')}`],
@@ -218,7 +220,7 @@ export function evaluate(a: Answers): EvalResult {
         obligations: [
           { title: '年度报告', deadline: '每年 1 月 31 日前提交上一年度保藏情况年度报告', citations: [X('第三十条')] },
           { title: '重大事项变更申请', deadline: '保藏目的、方案或内容等重大事项变更时提出变更申请', citations: [X('第四十五条')] },
-          { title: '许可延续', deadline: '有效期届满 30 个工作日前提出延续申请', citations: [X('第五十五条')] },
+          { title: '许可延续', deadline: '有效期届满 30 个工作日前提出延续申请；逾期提出的，主管部门不予受理', citations: [X('第五十五条'), F25s('之五第 2 问：延续行政许可或备案有效期须在届满 30 个工作日前提出申请，逾期将不予受理')] },
           { title: '来源与使用记录', deadline: '持续完整记录并妥善保存人遗资源来源信息和使用信息', citations: [A('第十五条')] },
         ],
         reasons: ['保存性质：长期保藏 / 建库'],
@@ -268,7 +270,7 @@ export function evaluate(a: Answers): EvalResult {
 
       const commonObligations: Obligation[] = [
         { title: '合作研究情况报告', deadline: '许可 / 备案有效期届满后 6 个月内，合作双方共同提交', citations: [A('第二十六条'), X('第三十五条')] },
-        { title: '延续申请', deadline: '有效期届满 30 个工作日前提出', citations: [X('第五十五条')] },
+        { title: '延续申请', deadline: '有效期届满 30 个工作日前提出；逾期提出的，主管部门不予受理', citations: [X('第五十五条'), F25s('之五第 2 问：延续行政许可或备案有效期须在届满 30 个工作日前提出申请，逾期将不予受理')] },
         { title: '双方共同申请', deadline: '国际合作事项由中方单位和外方单位共同申请，不得拆分多中心研究分别申请', citations: [X('第三十三条')] },
         { title: '中方实质性参与', deadline: '合作期间中方单位及研究人员全过程、实质性参与，所有记录及数据信息完全向中方开放并提供备份', citations: [A('第二十四条')] },
         { title: '剩余样本处理', deadline: '仍有研究价值的剩余样本原则上返还人遗资源样本提供方；或按申报时提交的暂存地点和期限暂存一定期限后，按相关规范予以销毁', citations: [F25('第二部分第 1 问：国际合作剩余样本原则上返还样本提供方，或按申报的暂存地点和期限暂存后按规范销毁')] },
@@ -308,7 +310,7 @@ export function evaluate(a: Answers): EvalResult {
             { title: '双方伦理审查', deadline: '申报前通过合作双方各自所在国（地区）伦理审查；外方确无法提供的，可提交其认可中方伦理审查意见的证明材料；单位性质为外方的合同研究组织（CRO）、第三方实验室无需提供所在国（地区）伦理审查证明材料', citations: [A('第二十二条'), X('第三十一条'), F25('第二部分第 9 问：外方合同研究组织、第三方实验室无需提供所在国（地区）伦理审查证明材料')] },
             { title: '合作协议', deadline: '申办方、组长单位、CRO、第三方实验室需提供相互关联的中文签字盖章协议', citations: [F('第二部分第 10 问')] },
             { title: '重大事项变更审批', deadline: '研究目的、内容、人遗种类数量用途、申办方/组长单位/CRO/第三方实验室等变更的，办理变更审批；累计不超获批数量 10% 等情形仅需书面说明', citations: [A('第二十三条'), X('第四十六、四十七条')] },
-            { title: '申报一致性自查', deadline: '伦理审查批件项目名称须与申报项目完全一致；申请样本量须与研究方案一致（不一致需作出合理说明）；研究方案内容不得超出合作协议范围', citations: [F('第一部分第 5 问；第四部分第 5-6 问')] },
+            { title: '申报一致性自查', deadline: '伦理审查批件项目名称须与申报项目完全一致；申报数量应不多于研究方案及知情同意书写明的数量（不一致需作出合理说明）；研究方案内容不得超出合作协议范围', citations: [F('第一部分第 5 问；第四部分第 5-6 问'), F25s('之五第 1 问：申报的人遗材料及信息数量应不多于方案及知情同意书写明的数量')] },
             { title: '成果归属', deadline: '专利由合作双方共同申请、共有；其他成果按协议约定', citations: [A('第二十四条')] },
             ...commonObligations,
           ],
@@ -583,7 +585,7 @@ function evaluateChange(a: Answers): EvalResult {
 
   // —— 例行义务提醒 ——
   const routine: Obligation[] = [
-    { title: '许可 / 备案延续', deadline: '有效期届满 30 个工作日前提出申请；逾期未决定的视为准予延续', citations: [X('第五十五条')] },
+    { title: '许可 / 备案延续', deadline: '有效期届满 30 个工作日前提出申请，逾期提出的不予受理；主管部门逾期未决定的视为准予延续', citations: [X('第五十五条'), F25s('之五第 2 问：延续行政许可或备案有效期须在届满 30 个工作日前提出申请，逾期将不予受理')] },
   ]
   if (track === 'approval_coop' || track === 'filing_trial') {
     routine.push({ title: '合作研究情况报告', deadline: '许可 / 备案有效期届满后 6 个月内，合作双方共同提交', citations: [X('第三十五条')] })

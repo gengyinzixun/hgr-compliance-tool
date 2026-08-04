@@ -11,7 +11,7 @@
  */
 
 /** 规则库版本快照：每次依据新法规/新口径更新规则后递增并更新复核日期 */
-export const RULESET_VERSION = '1.3.0'
+export const RULESET_VERSION = '1.4.0'
 export const RULESET_REVIEWED_AT = '2026-08-04'
 
 export type RegulationStatus =
@@ -78,7 +78,18 @@ export const REGULATIONS: Record<string, RegulationMeta> = {
     effective: '2025-03-27',
     status: 'current',
     statusNote:
-      '现行官方问答口径；其后卫健委另发布《人类遗传资源管理有关问题解答》之一至之五（之一 2025-04-01、之二 2025-04-09、之三 2025-04-17、之四 2025-04-25、之五 2025-10-11），待纳入下一轮比对。',
+      '现行官方问答口径；其后卫健委另发布《人类遗传资源管理有关问题解答》之一至之五，已单列 faq2025s 注册并于 2026-08-04 完成比对。',
+  },
+  faq2025s: {
+    id: 'faq2025s',
+    name: '《人类遗传资源管理有关问题解答》之一至之五（2025）',
+    issuer: '国家卫生健康委员会科教司',
+    currentAuthority: '国家卫生健康委员会',
+    promulgated: '2025-04-01 至 2025-10-11（分五期发布）',
+    effective: '2025-04-01',
+    status: 'current',
+    statusNote:
+      '之一 2025-04-01（商业化人源细胞系）、之二 2025-04-09（CDX/PDX）、之三 2025-04-17（CAR-T 出境）、之四 2025-04-25（空白基质国际合作）、之五 2025-10-11（申报数量、延续时限）。2026-08-04 完成逐条比对：之五 2 条已落地为义务增强；之一至之四为监管范围类口径，规则库无冲突，是否入题库待后续评估。详见 docs/问题解答之一至之五-比对报告.md。',
   },
   practice: {
     id: 'practice',
