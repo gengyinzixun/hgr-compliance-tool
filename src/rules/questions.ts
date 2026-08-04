@@ -25,6 +25,8 @@ export function deriveRegulatedMaterial(a: Answers): boolean {
   const kind = get(a, 'resource_kind')
   if (kind === 'info_only') return false
   const m = getMulti(a, 'material_type')
+  // 2025.03 FAQ 四、3：血清/血浆由本项目采集的全血处理获得的，按全血（受监管材料）申报
+  if ((m.includes('serum') || m.includes('plasma')) && get(a, 'serum_origin') === 'from_whole_blood') return true
   const regulated = ['whole_blood', 'tissue', 'cells', 'semen', 'csf', 'effusion', 'smear', 'hair']
   return m.some((x) => regulated.includes(x))
 }
@@ -44,6 +46,8 @@ export function deriveOnlyExemptMaterial(a: Answers): boolean {
   if (kind === 'info_only') return false
   const m = getMulti(a, 'material_type')
   if (m.length === 0) return false
+  // 血清/血浆来源于本项目采集全血的，按全血申报，不属于豁免材料
+  if ((m.includes('serum') || m.includes('plasma')) && get(a, 'serum_origin') === 'from_whole_blood') return false
   const exempt = ['urine', 'feces', 'serum', 'plasma', 'acellular']
   return m.every((x) => exempt.includes(x))
 }
@@ -61,6 +65,7 @@ export const questions: Question[] = [
     layerLabel: L1,
     text: '您的单位属于哪种性质？',
     help: '中方单位：我国科研机构、高等学校、医疗机构或企业（含设在港澳的内资实控机构）。外方单位：境外组织、个人设立或实际控制的机构。单位性质不由营业执照直接认定，需按股权与实际控制关系判定。',
+    terms: ['chinese_unit', 'foreign_unit', 'actual_control'],
     options: [
       { value: 'chinese', label: '中方单位', hint: '内资独资或中资控股的科研机构、高校、医疗机构、企业' },
       { value: 'foreign', label: '外方单位', hint: '境外组织/个人设立或实际控制的机构（含外商投资企业被境外实控的情形）' },
@@ -111,6 +116,7 @@ export const questions: Question[] = [
     layerLabel: L2,
     text: '项目涉及的对象属于哪一类？',
     help: '人类遗传资源 = 人遗材料（含遗传物质的器官、组织、细胞等）+ 人遗信息（利用材料产生的基因、基因组等数据）。',
+    terms: ['hgr_material', 'hgr_info'],
     options: [
       { value: 'material_only', label: '仅涉及样本/材料' },
       { value: 'info_only', label: '仅涉及数据/信息' },
@@ -124,6 +130,7 @@ export const questions: Question[] = [
     multi: true,
     text: '涉及哪些类型的样本材料？（可多选）',
     help: '尿液、粪便、血清、血浆等仅含极少量脱落/游离细胞或基因的样本，按主管部门常见问题解答口径不再纳入人遗材料管理范围。',
+    terms: ['hgr_material'],
     when: (a) => get(a, 'resource_kind') !== 'info_only',
     options: [
       { value: 'whole_blood', label: '全血' },
@@ -136,9 +143,26 @@ export const questions: Question[] = [
       { value: 'hair', label: '毛发（带毛囊）' },
       { value: 'urine', label: '尿液', hint: 'FAQ 口径：不纳入材料管理' },
       { value: 'feces', label: '粪便', hint: 'FAQ 口径：不纳入材料管理' },
-      { value: 'serum', label: '血清', hint: 'FAQ 口径：不纳入材料管理' },
-      { value: 'plasma', label: '血浆', hint: 'FAQ 口径：不纳入材料管理' },
+      { value: 'serum', label: '血清', hint: '原则上不纳入；由本项目采集全血处理获得的按全血申报' },
+      { value: 'plasma', label: '血浆', hint: '原则上不纳入；由本项目采集全血处理获得的按全血申报' },
       { value: 'acellular', label: '其他不含细胞的分泌物、体液、拭子', hint: '不纳入材料管理' },
+    ],
+  },
+  {
+    id: 'serum_origin',
+    layer: 2,
+    layerLabel: L2,
+    text: '项目涉及的血清 / 血浆，是否由本项目采集的全血处理获得？',
+    help: '按主管部门 2025 年常见问题解答口径：血清、血浆由采集全血处理获得的，按全血进行申报；直接以血清 / 血浆形式取得（如外部合作方提供）的，不纳入人遗材料管理范围。',
+    terms: ['third_party_lab'],
+    when: (a) => {
+      const m = getMulti(a, 'material_type')
+      return (m.includes('serum') || m.includes('plasma')) && !m.includes('whole_blood')
+    },
+    options: [
+      { value: 'from_whole_blood', label: '是，由本项目采集的全血处理获得', hint: '按全血申报，纳入受监管材料' },
+      { value: 'direct', label: '否，直接以血清 / 血浆形式取得或使用', hint: '维持豁免口径' },
+      { value: 'unclear', label: '不清楚' },
     ],
   },
   {
@@ -148,6 +172,7 @@ export const questions: Question[] = [
     multi: true,
     text: '涉及哪些类型的数据信息？（可多选）',
     help: '单纯的临床数据、影像数据、蛋白质数据和代谢数据不属于人遗信息。',
+    terms: ['hgr_info'],
     when: (a) => get(a, 'resource_kind') !== 'material_only',
     options: [
       { value: 'gene', label: '基因 / 基因组数据（含测序数据）' },
@@ -188,6 +213,7 @@ export const questions: Question[] = [
     layerLabel: L4,
     text: '采集是否涉及重要遗传家系？',
     help: '重要遗传家系：患遗传性疾病、具有遗传性特殊体质或生理特征的有血缘关系群体，且涉及三代或以上；高血压、糖尿病、红绿色盲、血友病等常见疾病不在此列。',
+    terms: ['key_pedigree'],
     when: (a) => has(a, 'activities', 'collect') && deriveUnitType(a) !== 'foreign',
     options: [
       { value: 'yes', label: '是' },
@@ -201,6 +227,7 @@ export const questions: Question[] = [
     layerLabel: L4,
     text: '采集是否涉及特定地区人类遗传资源？',
     help: '特定地区：在隔离或特殊环境下长期生活，具有特殊体质特征或适应性性状的人群；不以是否为少数民族聚居区划分。',
+    terms: ['specific_region'],
     when: (a) => has(a, 'activities', 'collect') && deriveUnitType(a) !== 'foreign',
     options: [
       { value: 'yes', label: '是' },
@@ -214,6 +241,7 @@ export const questions: Question[] = [
     layerLabel: L4,
     text: '采集是否用于大规模人群研究且人数大于 3000 例？',
     help: '大规模人群研究包括队列研究、横断面研究、临床研究、体质学研究等。',
+    terms: ['large_scale_study', 'counting_rule'],
     when: (a) => has(a, 'activities', 'collect') && deriveUnitType(a) !== 'foreign',
     options: [
       { value: 'yes', label: '是（> 3000 例）' },
@@ -239,6 +267,7 @@ export const questions: Question[] = [
     layerLabel: L4,
     text: '该保存行为是否仅为教学目的，或检测后按法规要求 / 临床研究方案约定的临时存储？',
     help: '保藏是指将来源合法的人遗资源保存在适宜条件下、用于未来科学研究的行为；临时存储不构成保藏。',
+    terms: ['preservation'],
     when: (a) => has(a, 'activities', 'bank') && deriveUnitType(a) !== 'foreign',
     options: [
       { value: 'yes', label: '是（属于临时存储，不构成保藏）' },
@@ -275,6 +304,7 @@ export const questions: Question[] = [
     layer: 4,
     layerLabel: L4,
     text: '人遗资源的采集、检测、分析和剩余样本处理，是否全部在临床医疗卫生机构内进行，或由临床试验方案指定的境内单位进行？',
+    terms: ['clinical_institution', 'analysis_unit'],
     when: (a) => get(a, 'coop_purpose') === 'yes',
     options: [
       { value: 'yes', label: '是' },
@@ -351,6 +381,7 @@ export const questions: Question[] = [
     multi: true,
     text: '拟对外提供 / 开放使用的信息是否涉及以下情形？（可多选，无则跳过）',
     help: '涉及以下情形的，应当通过主管部门组织的安全审查后方可对外提供或开放使用。',
+    terms: ['key_pedigree', 'specific_region', 'counting_rule'],
     when: (a) => has(a, 'activities', 'info_out') && get(a, 'info_public') === 'no' && get(a, 'info_within_coop') === 'no',
     options: [
       { value: 'family', label: '重要遗传家系的人遗信息' },

@@ -1,9 +1,10 @@
 import { useEffect, useMemo } from 'react'
 import type { Answers, Question } from '../rules/types'
 import { visibleQuestions } from '../rules/questions'
+import { GLOSSARY } from '../rules/glossary'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle2, ChevronLeft, Info } from 'lucide-react'
+import { BookMarked, CheckCircle2, ChevronLeft, Info } from 'lucide-react'
 
 interface Props {
   answers: Answers
@@ -129,6 +130,25 @@ export default function Wizard({ answers, currentId, onAnswer, onNavigate, onFin
           <div className="mt-3 flex gap-2 rounded-lg bg-amber-50 p-3 text-xs leading-5 text-amber-800">
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{q.help}</span>
+          </div>
+        )}
+        {q.terms && q.terms.length > 0 && (
+          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-slate-600">
+              <BookMarked className="h-3.5 w-3.5" /> 相关术语官方定义
+            </p>
+            <ul className="space-y-1.5">
+              {q.terms.map((tid) => {
+                const t = GLOSSARY[tid]
+                if (!t) return null
+                return (
+                  <li key={tid} className="text-[11px] leading-5 text-slate-600">
+                    <span className="font-medium text-slate-800">{t.term}</span>：{t.definition}
+                    <span className="block pl-3 text-[10px] text-slate-400">—— {t.source}</span>
+                  </li>
+                )
+              })}
+            </ul>
           </div>
         )}
         <div className="mt-5 grid gap-2">

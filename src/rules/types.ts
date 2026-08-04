@@ -10,6 +10,8 @@ export interface Citation {
   confidence: Confidence
   /** 补充说明（如原发文机关为科技部，现行监管职责已划转国家卫健委） */
   note?: string
+  /** 关联 regulations.ts 注册表中的法规版本元数据 */
+  regulationId?: string
 }
 
 export interface Obligation {
@@ -53,6 +55,8 @@ export interface Question {
   help?: string
   multi?: boolean
   options: Option[]
+  /** 关联 glossary.ts 中的术语 id，随题展示官方定义 */
+  terms?: string[]
   /** 所属流程：new=新项目申报评估（默认），existing=已获批项目变更评估 */
   flow?: 'new' | 'existing'
   /** 返回 true 时该题才会出现 */

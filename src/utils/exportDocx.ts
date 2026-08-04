@@ -15,6 +15,8 @@ import {
 import type { Answers, Conclusion, ConclusionType, Confidence } from '../rules/types'
 import type { EvalResult } from '../rules/evaluate'
 import { questions } from '../rules/questions'
+import { RULESET_REVIEWED_AT, RULESET_VERSION, STATUS_LABEL } from '../rules/regulations'
+import { relevantTerms } from '../rules/glossary'
 
 const TYPE_LABEL: Record<ConclusionType, string> = {
   prohibited: '禁止事项',
@@ -194,13 +196,51 @@ export async function exportReportDocx(result: EvalResult, answers: Answers): Pr
     }),
   )
 
+  // 五、评估依据（法规版本快照）
+  if (result.regulations.length > 0) {
+    children.push(
+      new Paragraph({
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 240, after: 120 },
+        children: [t('五、评估依据（法规版本快照）', { bold: true, size: 30 })],
+      }),
+    )
+    children.push(
+      p(`规则库版本：v${RULESET_VERSION} · 最近复核日期：${RULESET_REVIEWED_AT}`, { size: 19, color: '64748B', spacing: 100 }),
+    )
+    for (const r of result.regulations) {
+      const metaLine =
+        r.status === 'practice'
+          ? ''
+          : `（公布：${r.promulgated}；施行：${r.effective}；现行主管机关：${r.currentAuthority}）`
+      children.push(p(`· ${r.name}${metaLine}【${STATUS_LABEL[r.status]}】`, { size: 19, spacing: 40 }))
+      if (r.statusNote) children.push(p(`  ※ ${r.statusNote}`, { size: 17, color: 'B45309', spacing: 80 }))
+    }
+  }
+
+  // 六、相关术语官方定义
+  const terms = relevantTerms(answers)
+  if (terms.length > 0) {
+    children.push(
+      new Paragraph({
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 240, after: 120 },
+        children: [t('六、相关术语官方定义', { bold: true, size: 30 })],
+      }),
+    )
+    for (const term of terms) {
+      children.push(p(`· ${term.term}：${term.definition}`, { size: 19, spacing: 40 }))
+      children.push(p(`  —— ${term.source}`, { size: 17, color: '94A3B8', spacing: 80 }))
+    }
+  }
+
   // 声明
   children.push(
     new Paragraph({
       spacing: { before: 360 },
       children: [
         t(
-          '声明：本报告由规则引擎基于《中华人民共和国人类遗传资源管理条例》（2024 修订）及其实施细则（2023）、《人类遗传资源管理常见问题解答》（2023.09）自动生成；受理机关按现行口径统一表述为国家卫生健康委员会（2023 年机构改革后相关职责自科技部划转）。结论置信度分三级：A 为法规条文，B 为主管部门解答口径，C 为实践惯例；B / C 级结论请以法规原文或主管部门意见为准。本报告不构成法律意见。',
+          `声明：本报告由规则引擎（v${RULESET_VERSION}，复核日期 ${RULESET_REVIEWED_AT}）基于上文所列法规版本自动生成；受理机关按现行口径统一表述为国家卫生健康委员会（2023 年机构改革后相关职责自科技部划转）。结论置信度分三级：A 为法规条文，B 为主管部门解答口径，C 为实践惯例；B / C 级结论请以法规原文或主管部门意见为准。本报告不构成法律意见。`,
           { size: 17, color: '94A3B8', italics: true },
         ),
       ],

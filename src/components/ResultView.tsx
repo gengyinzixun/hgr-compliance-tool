@@ -1,12 +1,15 @@
 import type { Conclusion, ConclusionType, Confidence } from '../rules/types'
 import type { EvalResult } from '../rules/evaluate'
 import type { Answers } from '../rules/types'
+import { RULESET_REVIEWED_AT, RULESET_VERSION, STATUS_LABEL, type RegulationStatus } from '../rules/regulations'
+import { relevantTerms } from '../rules/glossary'
 import { exportReportDocx } from '../utils/exportDocx'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   AlertTriangle,
   Ban,
+  BookMarked,
   CalendarClock,
   FileCheck2,
   FileDown,
@@ -33,6 +36,12 @@ const CONF_META: Record<Confidence, { label: string; cls: string }> = {
   A: { label: 'A · 法规条文', cls: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
   B: { label: 'B · 官方解答口径', cls: 'bg-sky-100 text-sky-800 border-sky-200' },
   C: { label: 'C · 实践惯例', cls: 'bg-stone-100 text-stone-700 border-stone-200' },
+}
+
+const REG_STATUS_META: Record<RegulationStatus, { cls: string }> = {
+  current: { cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  outdated: { cls: 'bg-amber-100 text-amber-800 border-amber-300' },
+  practice: { cls: 'bg-stone-100 text-stone-700 border-stone-200' },
 }
 
 function ConclusionCard({ c }: { c: Conclusion }) {
@@ -175,8 +184,59 @@ export default function ResultView({ result, answers, onRestart }: { result: Eva
         ))}
       </div>
 
+      {/* 评估依据：法规版本快照 */}
+      {result.regulations.length > 0 && (
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+          <h3 className="flex items-center gap-2 text-sm font-bold text-slate-800">
+            <BookMarked className="h-4 w-4 text-slate-500" /> 评估依据（法规版本快照）
+          </h3>
+          <p className="mt-1 text-[11px] text-slate-500">
+            规则库版本 v{RULESET_VERSION} · 最近复核日期 {RULESET_REVIEWED_AT}
+          </p>
+          <ul className="mt-3 space-y-2">
+            {result.regulations.map((r) => (
+              <li key={r.id} className="rounded-lg bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-700">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{r.name}</span>
+                  <Badge variant="outline" className={`text-[10px] ${REG_STATUS_META[r.status].cls}`}>
+                    {STATUS_LABEL[r.status]}
+                  </Badge>
+                </div>
+                {r.status !== 'practice' && (
+                  <span className="block text-slate-500">
+                    公布：{r.promulgated} · 施行：{r.effective} · 现行主管机关：{r.currentAuthority}
+                  </span>
+                )}
+                {r.statusNote && <span className="block text-amber-700">※ {r.statusNote}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* 相关术语官方定义 */}
+      {(() => {
+        const terms = relevantTerms(answers)
+        if (terms.length === 0) return null
+        return (
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+            <h3 className="flex items-center gap-2 text-sm font-bold text-slate-800">
+              <BookMarked className="h-4 w-4 text-slate-500" /> 相关术语官方定义
+            </h3>
+            <ul className="mt-3 space-y-2">
+              {terms.map((t) => (
+                <li key={t.id} className="rounded-lg bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-700">
+                  <span className="font-medium text-slate-900">{t.term}</span>：{t.definition}
+                  <span className="block pl-3 text-[11px] text-slate-400">—— {t.source}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      })()}
+
       <p className="mt-8 text-center text-[11px] leading-5 text-slate-400">
-        本报告由规则引擎基于《人类遗传资源管理条例》（2024 修订）及其实施细则、主管部门常见问题解答自动生成，
+        本报告由规则引擎（v{RULESET_VERSION}，复核日期 {RULESET_REVIEWED_AT}）基于《人类遗传资源管理条例》（2024 修订）及其实施细则、主管部门常见问题解答自动生成，
         受理机关统一按现行口径表述为国家卫生健康委员会（原科技部相关职责已划转）。
         本工具为产品原型，结论不构成法律意见。
       </p>

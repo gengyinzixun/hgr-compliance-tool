@@ -8,16 +8,19 @@ import {
   getMulti,
   has,
 } from './questions'
+import { collectRegulations, type RegulationMeta } from './regulations'
 
 const TIAOLI = '《中华人民共和国人类遗传资源管理条例》（2024 修订）'
 const XIZE = '《人类遗传资源管理条例实施细则》（2023）'
 const FAQ = '《人类遗传资源管理常见问题解答》（2023.09）'
+const FAQ2025 = '《人类遗传资源管理常见问题解答》（2025.03）'
 const NOTE_MOST = '原发文机关为科技部；2023 年机构改革后，人类遗传资源监管职责已划转国家卫生健康委员会（国家卫健委），申报办理以国家卫健委政务服务平台现行口径为准。'
 
-const A = (article: string, note?: string): Citation => ({ source: TIAOLI, article, confidence: 'A', note })
-const X = (article: string): Citation => ({ source: XIZE, article, confidence: 'A', note: NOTE_MOST })
-const F = (topic: string): Citation => ({ source: FAQ, article: topic, confidence: 'B', note: NOTE_MOST })
-const P = (topic: string): Citation => ({ source: '实务操作惯例', article: topic, confidence: 'C', note: '非法规明文规定，系申报实践中的通行做法，建议重大事项与主管部门沟通确认。' })
+const A = (article: string, note?: string): Citation => ({ source: TIAOLI, article, confidence: 'A', note, regulationId: 'tiaoli' })
+const X = (article: string): Citation => ({ source: XIZE, article, confidence: 'A', note: NOTE_MOST, regulationId: 'xize' })
+const F = (topic: string): Citation => ({ source: FAQ, article: topic, confidence: 'B', note: NOTE_MOST, regulationId: 'faq' })
+const F25 = (topic: string): Citation => ({ source: FAQ2025, article: topic, confidence: 'B', regulationId: 'faq2025' })
+const P = (topic: string): Citation => ({ source: '实务操作惯例', article: topic, confidence: 'C', note: '非法规明文规定，系申报实践中的通行做法，建议重大事项与主管部门沟通确认。', regulationId: 'practice' })
 
 export interface EvalResult {
   unitType: 'chinese' | 'foreign' | 'unclear'
@@ -26,6 +29,18 @@ export interface EvalResult {
   onlyExemptMaterial: boolean
   conclusions: Conclusion[]
   grayAreas: GrayArea[]
+  /** 本次评估实际引用到的法规版本快照（按引用顺序去重） */
+  regulations: RegulationMeta[]
+}
+
+/** 汇总全部结论（含后续义务）中引用到的法规，生成版本快照 */
+function regulationsOf(conclusions: Conclusion[]): RegulationMeta[] {
+  const ids: string[] = []
+  for (const c of conclusions) {
+    for (const ci of c.citations) if (ci.regulationId) ids.push(ci.regulationId)
+    for (const ob of c.obligations) for (const ci of ob.citations) if (ci.regulationId) ids.push(ci.regulationId)
+  }
+  return collectRegulations(ids)
 }
 
 export function evaluate(a: Answers): EvalResult {
@@ -54,6 +69,7 @@ export function evaluate(a: Answers): EvalResult {
     ['collect_region', '是否涉及特定地区人遗资源'],
     ['collect_scale', '采集人数是否大于 3000 例'],
     ['coop_insite', '检测分析是否全部在境内指定单位进行'],
+    ['serum_origin', '血清 / 血浆是否由本项目采集的全血处理获得'],
   ]
   for (const [id, label] of unclearMap) {
     if (get(a, id) === 'unclear') {
@@ -82,7 +98,22 @@ export function evaluate(a: Answers): EvalResult {
     if (regI || get(a, 'resource_kind') !== 'material_only') {
       // 补充说明已在 risk 中
     }
-    return { unitType: unit, regulatedMaterial: regM, regulatedInfo: regI, onlyExemptMaterial: onlyExemptM, conclusions, grayAreas }
+    return { unitType: unit, regulatedMaterial: regM, regulatedInfo: regI, onlyExemptMaterial: onlyExemptM, conclusions, grayAreas, regulations: regulationsOf(conclusions) }
+  }
+
+  // ── 血清 / 血浆来源于本项目采集全血：按全血申报 + 第三方实验室认定 ──
+  if (get(a, 'serum_origin') === 'from_whole_blood') {
+    push({
+      id: 'serum-from-whole-blood',
+      type: 'notice',
+      title: '血清 / 血浆按全血申报：材料纳入管理范围，并注意第三方实验室认定',
+      summary:
+        '血清、血浆不再纳入人遗材料管理范围；但由本项目采集全血处理获得的血清 / 血浆，应按全血进行申报。本评估已按"涉及受监管材料（全血）"处理。',
+      citations: [F25('第四部分第 3 问：血清、血浆由采集全血处理获得的按全血申报')],
+      obligations: [],
+      reasons: ['血清 / 血浆由本项目采集的全血处理获得'],
+      risk: '第三方实验室认定：全血在医疗卫生机构处理为血清 / 血浆后送检、且不进行基因 / 基因组 / 转录组 / 表观组及核酸类生物标志物检测的，检测单位不纳入第三方实验室管理；若将采集的全血送至检测单位处理获得血清 / 血浆的，该检测单位仍按第三方实验室管理（影响国际合作申报与变更审批范围）。',
+    })
   }
 
   // ── 外方单位禁止事项 ──
@@ -220,8 +251,10 @@ export function evaluate(a: Answers): EvalResult {
         summary:
           role === 'funding_only'
             ? '外方无实质性参与、不获取研究数据信息、不共享研究成果（如仅提供研究用药或部分经费资助）的，不纳入利用我国人遗资源开展的国际合作管理。'
-            : '申办方、CRO、组长单位、第三方实验室等合作各方均为中方单位，仅 EDC 供应商或数据统计公司等服务方为外方的，不需要申请国际合作事项。',
-        citations: [F(role === 'funding_only' ? '第二部分第 5 问' : '第二部分第 2 问')],
+            : '申办方、CRO、组长单位、第三方实验室等合作各方均为中方单位，仅 EDC 供应商或数据统计公司等服务方为外方的，不需要申请国际合作事项；项目实施中产生的人遗信息传输给外方 EDC 供应商或数据统计公司，按协议数据管理约定开展相关工作的，亦无需信息备份和事先报告。',
+        citations: role === 'funding_only'
+          ? [F('第二部分第 5 问')]
+          : [F('第二部分第 2 问'), F25('第三部分第 5 问：信息传输给 EDC 供应商或数据统计公司按协议数据管理约定开展工作的，无需信息备份和事先报告')],
         obligations: [],
         reasons: [role === 'funding_only' ? '外方仅资助、无实质参与' : '仅服务供应商为外方'],
         risk: role === 'service_only' ? '注意：外方服务方若在协议数据管理约定范围以外使用研究数据，应由中方数据信息所有者申请人遗信息对外提供事先报告。' : undefined,
@@ -238,6 +271,7 @@ export function evaluate(a: Answers): EvalResult {
         { title: '延续申请', deadline: '有效期届满 30 个工作日前提出', citations: [X('第五十五条')] },
         { title: '双方共同申请', deadline: '国际合作事项由中方单位和外方单位共同申请，不得拆分多中心研究分别申请', citations: [X('第三十三条')] },
         { title: '中方实质性参与', deadline: '合作期间中方单位及研究人员全过程、实质性参与，所有记录及数据信息完全向中方开放并提供备份', citations: [A('第二十四条')] },
+        { title: '剩余样本处理', deadline: '仍有研究价值的剩余样本原则上返还人遗资源样本提供方；或按申报时提交的暂存地点和期限暂存一定期限后，按相关规范予以销毁', citations: [F25('第二部分第 1 问：国际合作剩余样本原则上返还样本提供方，或按申报的暂存地点和期限暂存后按规范销毁')] },
       ]
 
       if (purpose === 'yes' && insite === 'yes' && !exportInvolved) {
@@ -271,7 +305,7 @@ export function evaluate(a: Answers): EvalResult {
           summary: '利用我国人遗资源开展国际合作科学研究，应由合作双方共同提出申请，经主管部门批准后方可开展。',
           citations: [A('第二十一条、第二十二条'), X('第三十一条')],
           obligations: [
-            { title: '双方伦理审查', deadline: '申报前通过合作双方各自所在国（地区）伦理审查；外方确无法提供的，可提交其认可中方伦理审查意见的证明材料', citations: [A('第二十二条'), X('第三十一条')] },
+            { title: '双方伦理审查', deadline: '申报前通过合作双方各自所在国（地区）伦理审查；外方确无法提供的，可提交其认可中方伦理审查意见的证明材料；单位性质为外方的合同研究组织（CRO）、第三方实验室无需提供所在国（地区）伦理审查证明材料', citations: [A('第二十二条'), X('第三十一条'), F25('第二部分第 9 问：外方合同研究组织、第三方实验室无需提供所在国（地区）伦理审查证明材料')] },
             { title: '合作协议', deadline: '申办方、组长单位、CRO、第三方实验室需提供相互关联的中文签字盖章协议', citations: [F('第二部分第 10 问')] },
             { title: '重大事项变更审批', deadline: '研究目的、内容、人遗种类数量用途、申办方/组长单位/CRO/第三方实验室等变更的，办理变更审批；累计不超获批数量 10% 等情形仅需书面说明', citations: [A('第二十三条'), X('第四十六、四十七条')] },
             { title: '申报一致性自查', deadline: '伦理审查批件项目名称须与申报项目完全一致；申请样本量须与研究方案一致（不一致需作出合理说明）；研究方案内容不得超出合作协议范围', citations: [F('第一部分第 5 问；第四部分第 5-6 问')] },
@@ -381,8 +415,8 @@ export function evaluate(a: Answers): EvalResult {
         id: 'info-report',
         type: 'report',
         title: '需要办理：人遗信息对外提供 / 开放使用事先报告 + 信息备份',
-        summary: '将人遗信息向境外组织、个人及其设立或实际控制的机构提供或开放使用的，中方信息所有者应当向主管部门事先报告并提交信息备份；论文发表、会议发布、平台共享等开放使用情形同样适用。',
-        citations: [A('第二十八条'), X('第三十六条')],
+        summary: '将人遗信息向境外组织、个人及其设立或实际控制的机构提供或开放使用的，中方信息所有者应当向主管部门事先报告并提交信息备份；论文发表、会议发布、平台共享等开放使用情形同样适用。注意边界：项目实施中产生的人遗信息传输给 EDC 供应商或数据统计公司等外方单位，仅按协议数据管理约定开展相关工作的，无需信息备份和事先报告；超出约定范围使用的，仍应事先报告。',
+        citations: [A('第二十八条'), X('第三十六条'), F25('第三部分第 5 问：信息传输给 EDC 供应商或数据统计公司按协议数据管理约定开展工作的，无需信息备份和事先报告')],
         obligations: [
           { title: '报告与备份时点', deadline: '数据信息对外提供 / 开放使用之前完成', citations: [F('第三部分第 1 问')] },
           { title: '变更报告', deadline: '用途、接收方等事项变更的，在变更实施前提交事项变更报告', citations: [X('第五十四条')] },
@@ -409,7 +443,7 @@ export function evaluate(a: Answers): EvalResult {
   const order = ['prohibited', 'security-review', 'approval', 'filing', 'report', 'exempt', 'notice']
   conclusions.sort((x, y) => order.indexOf(x.type) - order.indexOf(y.type))
 
-  return { unitType: unit, regulatedMaterial: regM, regulatedInfo: regI, onlyExemptMaterial: onlyExemptM, conclusions, grayAreas }
+  return { unitType: unit, regulatedMaterial: regM, regulatedInfo: regI, onlyExemptMaterial: onlyExemptM, conclusions, grayAreas, regulations: regulationsOf(conclusions) }
 }
 
 /* ─────────────────────────────────────────────
@@ -570,5 +604,5 @@ function evaluateChange(a: Answers): EvalResult {
 
   const order = ['prohibited', 'security-review', 'approval', 'filing', 'report', 'exempt', 'notice']
   conclusions.sort((x, y) => order.indexOf(x.type) - order.indexOf(y.type))
-  return { unitType: 'chinese', regulatedMaterial: true, regulatedInfo: true, onlyExemptMaterial: false, conclusions, grayAreas }
+  return { unitType: 'chinese', regulatedMaterial: true, regulatedInfo: true, onlyExemptMaterial: false, conclusions, grayAreas, regulations: regulationsOf(conclusions) }
 }

@@ -149,6 +149,13 @@ expect2('A13 EDC豁免', { unit_type: 'chinese', resource_kind: 'both', material
 expect2('A14 豁免材料出境', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['urine', 'plasma'], activities: ['export'], export_only_exempt: 'yes' }, ['out-of-scope'], ['export-approval'])
 // A15 采集许可仅名称变更 → 变更审批（FAQ口径）
 expect2('A15 采集名称变更', { _flow: 'existing', ch_track: 'approval_collect', ch_unit_foreign: 'no', ch_convert: 'none', ch_items_collect: ['name_only'] }, ['ch-approval_collect-variation'])
+// A16 血清来自本项目采集全血 → 按全血申报：资源纳入管理，出现提示结论，不出 out-of-scope
+expect2('A16 血清按全血申报', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['serum'], serum_origin: 'from_whole_blood', activities: ['collect'], collect_family: 'yes', collect_region: 'no', collect_scale: 'no' }, ['serum-from-whole-blood', 'collect-approval'], ['out-of-scope'])
+// A17 血清直接取得 → 维持豁免，不出按全血申报提示
+expect2('A17 血清直接取得', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['serum'], serum_origin: 'direct' }, ['out-of-scope'], ['serum-from-whole-blood'])
+// A18 血清来源不清楚 → 灰色地带转人工
+const sga = evaluate({ unit_type: 'chinese', resource_kind: 'material_only', material_type: ['plasma'], serum_origin: 'unclear' })
+if (sga.grayAreas.some((g) => g.question.includes('血清'))) { pass++; console.log('PASS A18 血清来源灰色地带') } else { fail++; console.log('FAIL A18 血清来源应进灰色地带') }
 
 console.log(`\n${pass} passed, ${fail} failed`)
 if (fail > 0) process.exit(1)
