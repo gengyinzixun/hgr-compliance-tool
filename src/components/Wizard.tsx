@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import type { Answers, Question } from '../rules/types'
 import { visibleQuestions } from '../rules/questions'
 import { Button } from '@/components/ui/button'
@@ -24,6 +24,16 @@ export default function Wizard({ answers, currentId, onAnswer, onNavigate, onFin
     }
     return seen
   }, [visible])
+
+  // 兜底：当前题已不在可见序列中（答案变更导致题目被剪除）时，
+  // 不静默回退到第 1 题，而是跳到第一个未作答的可见题
+  useEffect(() => {
+    if (idx === -1 && visible.length > 0) {
+      const firstUnanswered = visible.find((x) => answers[x.id] === undefined)
+      onNavigate((firstUnanswered ?? visible[visible.length - 1]).id)
+    }
+  }, [idx, visible, answers, onNavigate])
+
   if (!q) return null
 
   const answered = new Set(Object.keys(answers))
@@ -36,6 +46,17 @@ export default function Wizard({ answers, currentId, onAnswer, onNavigate, onFin
 
   const cur = answers[q.id]
   const selectedMulti = Array.isArray(cur) ? cur : []
+
+  // 用"回答后的新答案"重新计算题目序列，再定位当前题的下一题。
+  // 不能用渲染时的旧 visible：答案可能改变后续题目的可见性
+  // （如 resource_kind=info_only 后 material_type 被隐藏），
+  // 旧列表算出的下一题在新列表中不存在，会错误回退到第 1 题。
+  const gotoNext = (nextAnswers: Answers) => {
+    const nextVisible = visibleQuestions(nextAnswers)
+    const curIdx = nextVisible.findIndex((x) => x.id === q.id)
+    const nextQ = curIdx >= 0 ? nextVisible[curIdx + 1] : undefined
+    if (nextQ) onNavigate(nextQ.id)
+  }
 
   const choose = (v: string) => {
     if (q.multi) {
@@ -50,8 +71,7 @@ export default function Wizard({ answers, currentId, onAnswer, onNavigate, onFin
       onAnswer(q.id, next)
     } else {
       onAnswer(q.id, v)
-      const nextQ = visible[idx + 1]
-      if (nextQ) onNavigate(nextQ.id)
+      gotoNext({ ...answers, [q.id]: v })
     }
   }
 
@@ -146,14 +166,11 @@ export default function Wizard({ answers, currentId, onAnswer, onNavigate, onFin
             <ChevronLeft className="mr-1 h-4 w-4" /> 上一题
           </Button>
           <div className="flex items-center gap-2">
-            {q.multi && (
+            {q.multi && !isLast && (
               <Button
                 size="sm"
                 disabled={selectedMulti.length === 0}
-                onClick={() => {
-                  const nextQ = visible[idx + 1]
-                  if (nextQ) onNavigate(nextQ.id)
-                }}
+                onClick={() => gotoNext(answers)}
               >
                 下一题
               </Button>
@@ -167,23 +184,25 @@ export default function Wizard({ answers, currentId, onAnswer, onNavigate, onFin
         </div>
       </div>
 
-      {/* 已答摘要 */}
-      {answered.size > 0 && (
-        <div className="mt-6">
-          <p className="mb-2 text-xs font-medium text-slate-500">已作答（点击可回看修改）</p>
-          <div className="flex flex-wrap gap-1.5">
-            {visible
-              .filter((x) => answered.has(x.id) && x.id !== q.id)
-              .map((x) => (
+      {/* 已答摘要（answers 始终含 _flow 控制字段，需先过滤再判断是否渲染） */}
+      {(() => {
+        const answeredOthers = visible.filter((x) => answered.has(x.id) && x.id !== q.id)
+        if (answeredOthers.length === 0) return null
+        return (
+          <div className="mt-6">
+            <p className="mb-2 text-xs font-medium text-slate-500">已作答（点击可回看修改）</p>
+            <div className="flex flex-wrap gap-1.5">
+              {answeredOthers.map((x) => (
                 <button key={x.id} onClick={() => onNavigate(x.id)}>
                   <Badge variant="secondary" className="cursor-pointer hover:bg-slate-200">
                     {x.text.slice(0, 14)}…
                   </Badge>
                 </button>
               ))}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }

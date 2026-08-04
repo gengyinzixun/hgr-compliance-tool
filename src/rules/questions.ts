@@ -247,18 +247,6 @@ export const questions: Question[] = [
   },
   // —— 国际合作 ——
   {
-    id: 'coop_multicenter',
-    layer: 4,
-    layerLabel: L4,
-    text: '该国际合作是否涉及多中心临床研究？',
-    help: '多中心临床研究不得拆分后分别申请行政许可或备案；组长单位通过伦理审查后，即可由申办方或组长单位统一申请。',
-    when: (a) => has(a, 'activities', 'coop') && get(a, 'coop_role') === 'substantial',
-    options: [
-      { value: 'yes', label: '是（多中心）' },
-      { value: 'no', label: '否（单中心）' },
-    ],
-  },
-  {
     id: 'coop_role',
     layer: 4,
     layerLabel: L4,
@@ -304,6 +292,20 @@ export const questions: Question[] = [
     options: [
       { value: 'yes', label: '是' },
       { value: 'no', label: '否' },
+    ],
+  },
+  // 多中心题依赖 coop_role === 'substantial'，必须放在 role/purpose/insite/exploratory 之后，
+  // 否则它会插在被依赖题之前，正向作答永远走不到
+  {
+    id: 'coop_multicenter',
+    layer: 4,
+    layerLabel: L4,
+    text: '该国际合作是否涉及多中心临床研究？',
+    help: '多中心临床研究不得拆分后分别申请行政许可或备案；组长单位通过伦理审查后，即可由申办方或组长单位统一申请。',
+    when: (a) => has(a, 'activities', 'coop') && get(a, 'coop_role') === 'substantial',
+    options: [
+      { value: 'yes', label: '是（多中心）' },
+      { value: 'no', label: '否（单中心）' },
     ],
   },
   // —— 材料出境 ——
