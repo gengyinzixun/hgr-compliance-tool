@@ -75,7 +75,6 @@ src/
 │   └── exportDocx.ts    # Word 报告导出
 └── pages/Home.tsx       # 入口与流程编排
 docs/
-├── background/          # 背景文档：中方/外方单位合规操作流程指引
 └── screenshots/         # README 界面预览图（npm run screenshots 重新生成）
 scripts/
 └── screenshots.mjs      # 截图脚本：自动启停 dev server 并重截预览图
@@ -103,4 +102,4 @@ smoke-test.mts           # 规则引擎冒烟测试（npm run test:rules）
 
 ## License
 
-[MIT](LICENSE)（代码）；`docs/background/` 下的指引文档版权归原作者所有，不适用于 MIT 许可。
+[MIT](LICENSE)（代码）。中方/外方单位合规操作指引文档因版权归原作者所有，未包含在本仓库中。
