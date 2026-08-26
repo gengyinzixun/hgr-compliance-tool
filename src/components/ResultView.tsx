@@ -22,14 +22,14 @@ import {
   UserRound,
 } from 'lucide-react'
 
-const TYPE_META: Record<ConclusionType, { label: string; cls: string; icon: React.ReactNode }> = {
-  prohibited: { label: '禁止事项', cls: 'border-red-300 bg-red-50', icon: <Ban className="h-5 w-5 text-red-600" /> },
-  'security-review': { label: '安全审查', cls: 'border-orange-300 bg-orange-50', icon: <ShieldAlert className="h-5 w-5 text-orange-600" /> },
-  approval: { label: '行政许可', cls: 'border-rose-200 bg-rose-50', icon: <Scale className="h-5 w-5 text-rose-600" /> },
-  filing: { label: '备案', cls: 'border-blue-200 bg-blue-50', icon: <FileCheck2 className="h-5 w-5 text-blue-600" /> },
-  report: { label: '事先报告', cls: 'border-violet-200 bg-violet-50', icon: <FileText className="h-5 w-5 text-violet-600" /> },
-  exempt: { label: '无需申报 / 豁免', cls: 'border-emerald-200 bg-emerald-50', icon: <FlagTriangleRight className="h-5 w-5 text-emerald-600" /> },
-  notice: { label: '合规提示', cls: 'border-slate-200 bg-slate-50', icon: <AlertTriangle className="h-5 w-5 text-slate-500" /> },
+const TYPE_META: Record<ConclusionType, { label: string; bar: string; icon: React.ReactNode }> = {
+  prohibited: { label: '禁止事项', bar: 'border-l-red-500', icon: <Ban className="h-4 w-4 text-red-600" /> },
+  'security-review': { label: '安全审查', bar: 'border-l-orange-500', icon: <ShieldAlert className="h-4 w-4 text-orange-600" /> },
+  approval: { label: '行政许可', bar: 'border-l-rose-500', icon: <Scale className="h-4 w-4 text-rose-600" /> },
+  filing: { label: '备案', bar: 'border-l-blue-500', icon: <FileCheck2 className="h-4 w-4 text-blue-600" /> },
+  report: { label: '事先报告', bar: 'border-l-violet-500', icon: <FileText className="h-4 w-4 text-violet-600" /> },
+  exempt: { label: '无需申报 / 豁免', bar: 'border-l-emerald-500', icon: <FlagTriangleRight className="h-4 w-4 text-emerald-600" /> },
+  notice: { label: '合规提示', bar: 'border-l-slate-400', icon: <AlertTriangle className="h-4 w-4 text-slate-400" /> },
 }
 
 const CONF_META: Record<Confidence, { label: string; cls: string }> = {
@@ -37,6 +37,14 @@ const CONF_META: Record<Confidence, { label: string; cls: string }> = {
   B: { label: 'B · 官方解答口径', cls: 'bg-sky-100 text-sky-800 border-sky-200' },
   C: { label: 'C · 实践惯例', cls: 'bg-stone-100 text-stone-700 border-stone-200' },
 }
+
+/** 置信度等级序：A 最高、C 最低；卡片只展示该卡最低（最保守）一级 */
+const CONF_RANK: Record<Confidence, number> = { A: 0, B: 1, C: 2 }
+const worstConfidence = (citations: Conclusion['citations']): Confidence | null =>
+  citations.reduce<Confidence | null>(
+    (acc, ci) => (acc === null || CONF_RANK[ci.confidence] > CONF_RANK[acc] ? ci.confidence : acc),
+    null,
+  )
 
 const REG_STATUS_META: Record<RegulationStatus, { cls: string }> = {
   current: { cls: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
@@ -46,70 +54,68 @@ const REG_STATUS_META: Record<RegulationStatus, { cls: string }> = {
 
 function ConclusionCard({ c }: { c: Conclusion }) {
   const meta = TYPE_META[c.type]
+  const worst = worstConfidence(c.citations)
   return (
-    <div className={`rounded-2xl border p-5 ${meta.cls} break-inside-avoid`}>
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5 shrink-0">{meta.icon}</div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className="bg-white/70 text-xs">{meta.label}</Badge>
-            {c.citations.map((ci, i) => (
-              <Badge key={i} variant="outline" className={`text-[10px] ${CONF_META[ci.confidence].cls}`}>
-                {CONF_META[ci.confidence].label}
-              </Badge>
-            ))}
-          </div>
-          <h3 className="mt-2 text-base font-semibold leading-6 text-slate-900">{c.title}</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-700">{c.summary}</p>
-
-          {c.reasons.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {c.reasons.map((r, i) => (
-                <span key={i} className="rounded-full bg-white/70 px-2.5 py-1 text-[11px] text-slate-600 ring-1 ring-slate-200">
-                  {r}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {c.citations.length > 0 && (
-            <div className="mt-3 rounded-lg bg-white/60 p-3">
-              <p className="mb-1 text-xs font-semibold text-slate-600">依据条款</p>
-              <ul className="space-y-1">
-                {c.citations.map((ci, i) => (
-                  <li key={i} className="text-xs leading-5 text-slate-600">
-                    <span className="font-medium">{ci.source}</span> {ci.article}
-                    {ci.note && <span className="block pl-3 text-[11px] text-slate-400">※ {ci.note}</span>}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {c.obligations.length > 0 && (
-            <div className="mt-3">
-              <p className="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-700">
-                <CalendarClock className="h-3.5 w-3.5" /> 后续义务与时限
-              </p>
-              <ul className="space-y-1.5">
-                {c.obligations.map((ob, i) => (
-                  <li key={i} className="rounded-lg bg-white/60 px-3 py-2 text-xs leading-5 text-slate-700">
-                    <span className="font-medium">{ob.title}</span>
-                    <span className="block text-slate-500">{ob.deadline}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {c.risk && (
-            <div className="mt-3 flex gap-2 rounded-lg border border-red-200 bg-red-50/80 p-3 text-xs leading-5 text-red-800">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{c.risk}</span>
-            </div>
-          )}
-        </div>
+    <div className={`rounded-xl border border-slate-200 border-l-4 bg-white p-5 break-inside-avoid ${meta.bar}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        {meta.icon}
+        <span className="text-xs font-medium text-slate-500">{meta.label}</span>
+        {worst && (
+          <Badge variant="outline" className={`text-[10px] ${CONF_META[worst].cls}`}>
+            {CONF_META[worst].label}
+          </Badge>
+        )}
       </div>
+      <h3 className="mt-2 text-base font-semibold leading-6 text-slate-900">{c.title}</h3>
+      <p className="mt-1.5 text-sm leading-6 text-slate-700">{c.summary}</p>
+
+      {c.reasons.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {c.reasons.map((r, i) => (
+            <span key={i} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-600">
+              {r}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {c.citations.length > 0 && (
+        <div className="mt-3 border-t border-slate-100 pt-3">
+          <p className="mb-1 text-xs font-semibold text-slate-600">依据条款</p>
+          <ul className="space-y-1">
+            {c.citations.map((ci, i) => (
+              <li key={i} className="text-xs leading-5 text-slate-600">
+                <span className="font-medium text-slate-700">{ci.source}</span> {ci.article}
+                <span className="ml-1.5 text-[10px] text-slate-400">{ci.confidence} 级</span>
+                {ci.note && <span className="block pl-3 text-[11px] text-slate-400">※ {ci.note}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {c.obligations.length > 0 && (
+        <div className="mt-3 border-t border-slate-100 pt-3">
+          <p className="mb-1.5 flex items-center gap-1 text-xs font-semibold text-slate-700">
+            <CalendarClock className="h-3.5 w-3.5" /> 后续义务与时限
+          </p>
+          <ul className="space-y-1.5">
+            {c.obligations.map((ob, i) => (
+              <li key={i} className="rounded-lg bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-700">
+                <span className="font-medium">{ob.title}</span>
+                <span className="block text-slate-500">{ob.deadline}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {c.risk && (
+        <div className="mt-3 flex gap-2 rounded-lg border border-red-200 bg-red-50/80 p-3 text-xs leading-5 text-red-800">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{c.risk}</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -122,7 +128,7 @@ export default function ResultView({ result, answers, onRestart }: { result: Eva
   return (
     <div className="mx-auto max-w-3xl px-4 pb-24">
       {/* 报告头 */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-medium tracking-wide text-slate-500">人类遗传资源申报备案评估报告（原型）</p>
@@ -186,28 +192,31 @@ export default function ResultView({ result, answers, onRestart }: { result: Eva
 
       {/* 评估依据：法规版本快照 */}
       {result.regulations.length > 0 && (
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
           <h3 className="flex items-center gap-2 text-sm font-bold text-slate-800">
             <BookMarked className="h-4 w-4 text-slate-500" /> 评估依据（法规版本快照）
           </h3>
           <p className="mt-1 text-[11px] text-slate-500">
             规则库版本 v{RULESET_VERSION} · 最近复核日期 {RULESET_REVIEWED_AT}
           </p>
-          <ul className="mt-3 space-y-2">
+          <ul className="mt-3 divide-y divide-slate-100">
             {result.regulations.map((r) => (
-              <li key={r.id} className="rounded-lg bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-700">
+              <li key={r.id} className="py-2 text-xs leading-5 text-slate-700">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{r.name}</span>
                   <Badge variant="outline" className={`text-[10px] ${REG_STATUS_META[r.status].cls}`}>
                     {STATUS_LABEL[r.status]}
                   </Badge>
                 </div>
+                {r.userNote && <span className="block text-[11px] text-slate-400">※ {r.userNote}</span>}
                 {r.status !== 'practice' && (
-                  <span className="block text-slate-500">
-                    公布：{r.promulgated} · 施行：{r.effective} · 现行主管机关：{r.currentAuthority}
-                  </span>
+                  <details>
+                    <summary className="cursor-pointer text-[11px] text-slate-400 hover:text-slate-600">版本详情</summary>
+                    <span className="block pl-3 text-slate-500">
+                      公布：{r.promulgated} · 施行：{r.effective} · 现行主管机关：{r.currentAuthority}
+                    </span>
+                  </details>
                 )}
-                {r.statusNote && <span className="block text-amber-700">※ {r.statusNote}</span>}
               </li>
             ))}
           </ul>
@@ -219,7 +228,7 @@ export default function ResultView({ result, answers, onRestart }: { result: Eva
         const terms = relevantTerms(answers)
         if (terms.length === 0) return null
         return (
-          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+          <div className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
             <h3 className="flex items-center gap-2 text-sm font-bold text-slate-800">
               <BookMarked className="h-4 w-4 text-slate-500" /> 相关术语官方定义
             </h3>

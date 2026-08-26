@@ -33,8 +33,10 @@ export interface RegulationMeta {
   effective: string
   /** 保鲜状态 */
   status: RegulationStatus
-  /** 状态说明（如已有新版解答、修订动态） */
+  /** 状态说明（内部维护记录：比对结论、落地细节等，仅供规则库维护，不在报告界面 / Word 中展示） */
   statusNote?: string
+  /** 用户向时效提示（展示在报告界面与 Word 中，一两句话，面向使用者的口径说明） */
+  userNote?: string
 }
 
 export const REGULATIONS: Record<string, RegulationMeta> = {
@@ -57,6 +59,7 @@ export const REGULATIONS: Record<string, RegulationMeta> = {
     status: 'outdated',
     statusNote:
       '国家卫健委已于 2026-05-08 发布本细则修订征求意见稿（尚未生效），拟调整采集许可门槛、省级委托等安排；正式修订发布后需复核规则库。',
+    userNote: '主管部门已于 2026-05-08 发布本细则的修订征求意见稿（尚未生效），本报告按现行有效版本评估。',
   },
   faq: {
     id: 'faq',
@@ -68,6 +71,7 @@ export const REGULATIONS: Record<string, RegulationMeta> = {
     status: 'outdated',
     statusNote:
       '卫健委科教司已发布 2025-03-27 新版《问题解答》。2026-08-04 完成逐条比对：19/20 处引用口径一致、继续有效；仅"对外提供人遗资源的提供方仅指中方单位"一条新版未收录（该结论由条例第七条等 A 级条文支撑）。详见 docs/faq-2025-比对报告.md。',
+    userNote: '主管部门已发布 2025 年新版《问题解答》；经逐条比对，本报告引用的该版口径与新版一致、继续有效。',
   },
   faq2025: {
     id: 'faq2025',
@@ -100,6 +104,7 @@ export const REGULATIONS: Record<string, RegulationMeta> = {
     effective: '——',
     status: 'practice',
     statusNote: '非法规明文规定，系申报实践中的通行做法，重大事项建议与主管部门沟通确认。',
+    userNote: '非法规明文规定，系申报实践中的通行做法，重大事项建议与主管部门沟通确认。',
   },
 }
 
