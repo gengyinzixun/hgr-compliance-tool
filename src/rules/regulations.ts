@@ -11,8 +11,8 @@
  */
 
 /** 规则库版本快照：每次依据新法规/新口径更新规则后递增并更新复核日期 */
-export const RULESET_VERSION = '1.5.0'
-export const RULESET_REVIEWED_AT = '2026-08-04'
+export const RULESET_VERSION = '1.6.0'
+export const RULESET_REVIEWED_AT = '2026-08-26'
 
 export type RegulationStatus =
   | 'current' // 现行有效，规则已对齐

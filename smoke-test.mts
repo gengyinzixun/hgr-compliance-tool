@@ -172,5 +172,31 @@ expect2('A23 CART诊疗出境豁免', { unit_type: 'chinese', resource_kind: 'ma
 // A24 科研目的细胞出境 → 仍需出境审批（之三反向，验证新题不破坏原路径）
 expect2('A24 科研出境仍审批', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['cells'], cells_deidentified: 'no', activities: ['export'], export_clinical_care: 'no', export_only_exempt: 'no' }, ['export-approval'], ['export-exempt-clinical'])
 
+// ── 第五轮：材料清单补全 + 事先报告变更轨道（2026-08-26）──
+// A25 唾液（含口腔脱落细胞）→ 受监管材料，采集按常规评估，不出 out-of-scope
+expect2('A25 唾液纳入监管', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['saliva'], activities: ['collect'], collect_family: 'no', collect_region: 'no', collect_scale: 'no' }, ['collect-exempt-general'], ['out-of-scope'])
+// A26 骨髓 → 受监管材料（涂片以外的骨髓样本）
+expect2('A26 骨髓纳入监管', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['bone_marrow'], activities: ['collect'], collect_family: 'no', collect_region: 'no', collect_scale: 'no' }, ['collect-exempt-general'], ['out-of-scope'])
+// A27 器官（条例第二条明文列举）→ 受监管材料
+expect2('A27 器官纳入监管', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['organ'], activities: ['export'], export_clinical_care: 'no', export_only_exempt: 'no' }, ['export-approval'], ['out-of-scope'])
+// A28 兜底项：其他含人体细胞样本 → 受监管材料
+expect2('A28 其他含细胞样本纳入', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['other_cellular'] }, ['general-compliance'], ['out-of-scope'])
+// A29 变更流程：事先报告事项变更（接收方）→ 变更报告 + 义务提醒
+expect2('A29 事先报告变更', { _flow: 'existing', ch_track: 'report_info', ch_unit_foreign: 'no', ch_items_info: ['recipient'] }, ['ch-info-variation', 'ch-routine'])
+// A30 变更流程：事先报告无变化 → 仅义务提醒，不出变更报告，且不含"延续"义务
+{
+  const res = evaluate({ _flow: 'existing', ch_track: 'report_info', ch_unit_foreign: 'no', ch_items_info: ['none'] })
+  const got = res.conclusions.map((c) => c.id)
+  const routineC = res.conclusions.find((c) => c.id === 'ch-routine')
+  const noRenewal = routineC ? !routineC.obligations.some((o) => o.title.includes('延续')) : false
+  const ok = got.includes('ch-routine') && !got.includes('ch-info-variation') && noRenewal
+  if (ok) { pass++; console.log('PASS A30 事先报告无变化仅提醒') } else { fail++; console.log(`FAIL A30 -> ${got.join(',')}`) }
+}
+// A31 变更流程：report_info 轨道不出现许可/备案转换题，且出现 ch_items_info 题
+{
+  const qs3 = visibleQuestions({ _flow: 'existing', ch_track: 'report_info' }).map((q) => q.id)
+  if (!qs3.includes('ch_convert') && qs3.includes('ch_items_info')) { pass++; console.log('PASS A31 事先报告轨道题目匹配') } else { fail++; console.log(`FAIL A31 -> ${qs3.join(',')}`) }
+}
+
 console.log(`\n${pass} passed, ${fail} failed`)
 if (fail > 0) process.exit(1)

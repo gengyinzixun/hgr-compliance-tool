@@ -474,6 +474,7 @@ const TRACK_LABEL: Record<string, string> = {
   approval_bank: '保藏行政许可',
   approval_coop: '国际合作科学研究行政许可',
   filing_trial: '国际合作临床试验备案',
+  report_info: '信息对外提供 / 开放使用事先报告',
 }
 
 function evaluateChange(a: Answers): EvalResult {
@@ -598,9 +599,37 @@ function evaluateChange(a: Answers): EvalResult {
         reasons: ['方案变更不涉及人遗变化'],
       })
     }
+  } else if (track === 'report_info') {
+    const items = getMulti(a, 'ch_items_info').filter((x) => x !== 'none')
+    if (items.length > 0) {
+      push({
+        id: 'ch-info-variation',
+        type: 'report',
+        title: '需要办理：信息对外提供 / 开放使用事项变更报告',
+        summary: '已完成事先报告的信息对外提供 / 开放使用事项，其用途、接收方、信息种类或范围等事项发生变更的，应当在变更实施前向主管部门提交事项变更报告；变更事项须在完成变更报告后方可实施。',
+        citations: [X('第五十四条')],
+        obligations: [
+          { title: '变更报告时点', deadline: '变更实施前向主管部门提交事项变更报告及相应材料', citations: [X('第五十四条')] },
+        ],
+        reasons: ['已报告事项发生变更'],
+        risk: '变更后未提交变更报告即实施的，可能被认定为未按报告事项对外提供信息，面临责令改正、警告及罚款（条例第四十条）。',
+      })
+    }
   }
 
   // —— 例行义务提醒 ——
+  if (track === 'report_info') {
+    // 事先报告为一次性事项：无许可/备案有效期延续、无年度报告义务
+    push({
+      id: 'ch-routine',
+      type: 'notice',
+      title: `${trackLabel}：义务提醒`,
+      summary: '信息对外提供 / 开放使用事先报告为一次性事项，无有效期延续、年度报告等例行义务；已报告事项发生变更（用途、接收方、信息种类范围等）的，应在变更实施前提交事项变更报告。',
+      citations: [X('第三十六条、第五十四条')],
+      obligations: [],
+      reasons: ['适用于已完成事先报告的事项'],
+    })
+  } else {
   const routine: Obligation[] = [
     { title: '许可 / 备案延续', deadline: '有效期届满 30 个工作日前提出申请，逾期提出的不予受理；主管部门逾期未决定的视为准予延续', citations: [X('第五十五条'), F25s('之五第 2 问：延续行政许可或备案有效期须在届满 30 个工作日前提出申请，逾期将不予受理')] },
   ]
@@ -620,6 +649,7 @@ function evaluateChange(a: Answers): EvalResult {
     obligations: routine,
     reasons: ['适用于全部已获批 / 备案项目'],
   })
+  }
 
   const order = ['prohibited', 'security-review', 'approval', 'filing', 'report', 'exempt', 'notice']
   conclusions.sort((x, y) => order.indexOf(x.type) - order.indexOf(y.type))

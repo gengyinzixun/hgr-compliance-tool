@@ -40,10 +40,14 @@ export default function Wizard({ answers, currentId, onAnswer, onNavigate, onFin
   const answered = new Set(Object.keys(answers))
   const currentLayer = q.layer
   const isLast = idx === visible.length - 1
-  const canFinish =
-    (isLast && answered.has(q.id)) ||
-    answered.has('activities') ||
-    (answered.has('resource_kind') && !visible.some((x) => x.id === 'activities'))
+  // 多选题取消全部选项后 key 仍在但为空数组，视为未作答
+  const isAnswered = (id: string) => {
+    const v = answers[id]
+    return Array.isArray(v) ? v.length > 0 : v !== undefined
+  }
+  // 仅当所有可见题均已作答时才出现"生成评估报告"，
+  // 避免中途同时出现"下一题"和"生成报告"导致用户漏答后续题目
+  const canFinish = visible.every((x) => isAnswered(x.id))
 
   const cur = answers[q.id]
   const selectedMulti = Array.isArray(cur) ? cur : []

@@ -29,7 +29,12 @@ export function deriveRegulatedMaterial(a: Answers): boolean {
   if ((m.includes('serum') || m.includes('plasma')) && get(a, 'serum_origin') === 'from_whole_blood') return true
   // 《问题解答》之一/之二：已去除样本相关信息、无法追溯至个人的永生化细胞系（含 CDX）不纳入监管
   const cellsRegulated = m.includes('cells') && get(a, 'cells_deidentified') !== 'yes'
-  const regulated = ['whole_blood', 'tissue', 'semen', 'csf', 'effusion', 'smear', 'hair']
+  // 官方列举为开放式（"等"）：器官、骨髓、唾液（含脱落细胞）、产前样本、生殖材料及
+  // 其他含人体细胞的样本均按受监管材料处理
+  const regulated = [
+    'whole_blood', 'tissue', 'organ', 'semen', 'gamete', 'csf', 'effusion', 'smear', 'hair',
+    'bone_marrow', 'saliva', 'fetal', 'other_cellular',
+  ]
   return cellsRegulated || m.some((x) => regulated.includes(x))
 }
 
@@ -132,18 +137,24 @@ export const questions: Question[] = [
     layerLabel: L2,
     multi: true,
     text: '涉及哪些类型的样本材料？（可多选）',
-    help: '尿液、粪便、血清、血浆等仅含极少量脱落/游离细胞或基因的样本，按主管部门常见问题解答口径不再纳入人遗材料管理范围。',
+    help: '官方列举为开放式（条例第二条"器官、组织、细胞等"+ 服务指南列举以"等"结尾）：凡含有人体细胞 / 遗传物质的样本均属于人遗材料，不以本清单穷尽。尿液、粪便、血清、血浆等仅含极少量脱落/游离细胞或基因的样本，按主管部门常见问题解答口径不再纳入人遗材料管理范围。',
     terms: ['hgr_material'],
     when: (a) => get(a, 'resource_kind') !== 'info_only',
     options: [
       { value: 'whole_blood', label: '全血' },
       { value: 'tissue', label: '组织 / 组织切片' },
+      { value: 'organ', label: '器官', hint: '条例第二条明文列举（含手术离体器官、移植器官）' },
       { value: 'cells', label: '细胞（含细胞系）', hint: '去标识、不可追溯的商业化永生化细胞系 / CDX 不纳入监管' },
+      { value: 'bone_marrow', label: '骨髓', hint: '穿刺液 / 活检组织等含大量有核细胞；血 / 骨髓涂片另单列' },
+      { value: 'saliva', label: '唾液', hint: '含口腔脱落上皮细胞，纳入管理；仅经处理不含细胞的上清见"不含细胞"项' },
+      { value: 'fetal', label: '羊水 / 绒毛 / 脐带血等产前样本', hint: '含胎儿细胞，纳入管理' },
       { value: 'semen', label: '精液' },
+      { value: 'gamete', label: '卵子、胚胎等其他生殖相关材料', hint: '与精液同属含遗传物质的人体材料' },
       { value: 'csf', label: '脑脊液' },
       { value: 'effusion', label: '胸 / 腹腔积液' },
       { value: 'smear', label: '血 / 骨髓涂片' },
       { value: 'hair', label: '毛发（带毛囊）' },
+      { value: 'other_cellular', label: '其他含人体细胞 / 遗传物质的样本', hint: '兜底项：官方列举为开放式，含细胞即纳入' },
       { value: 'urine', label: '尿液', hint: 'FAQ 口径：不纳入材料管理' },
       { value: 'feces', label: '粪便', hint: 'FAQ 口径：不纳入材料管理' },
       { value: 'serum', label: '血清', hint: '原则上不纳入；由本项目采集全血处理获得的按全血申报' },
@@ -432,6 +443,7 @@ export const questions: Question[] = [
       { value: 'approval_bank', label: '保藏行政许可' },
       { value: 'approval_coop', label: '国际合作科学研究行政许可' },
       { value: 'filing_trial', label: '国际合作临床试验备案' },
+      { value: 'report_info', label: '信息对外提供 / 开放使用事先报告' },
     ],
   },
   {
@@ -452,6 +464,8 @@ export const questions: Question[] = [
     layer: 2,
     layerLabel: '第 2 步 · 特殊情形',
     text: '是否涉及许可与备案之间的转换情形？',
+    // 许可/备案转换仅适用于国际合作两类事项，采集/保藏/事先报告轨道无此情形
+    when: (a) => ['approval_coop', 'filing_trial'].includes(get(a, 'ch_track') ?? ''),
     options: [
       { value: 'filing_to_approval', label: '已备案项目因条件改变，需转为国际合作科学研究许可' },
       { value: 'approval_to_filing', label: '已获批的许可项目，现符合临床试验备案情形' },
@@ -522,6 +536,22 @@ export const questions: Question[] = [
       { value: 'major', label: '合作方、研究方案、研究内容、研究目的等重大事项变更' },
       { value: 'plan_no_hgr', label: '方案或内容变更，但不涉及人遗种类 / 数量 / 用途变化' },
       { value: 'none', label: '暂无变化（仅咨询延续 / 报告义务）' },
+    ],
+  },
+  {
+    id: 'ch_items_info',
+    flow: 'existing',
+    layer: 3,
+    layerLabel: '第 3 步 · 变更内容',
+    multi: true,
+    text: '已报告的信息对外提供 / 开放使用事项拟发生哪些变化？（可多选）',
+    help: '按实施细则第五十四条：已报告事项发生变更的，应当在变更实施前向主管部门提交事项变更报告。事先报告为一次性事项，无有效期延续与年度报告义务。',
+    when: (a) => get(a, 'ch_track') === 'report_info',
+    options: [
+      { value: 'purpose_use', label: '信息用途变更' },
+      { value: 'recipient', label: '接收方（境外组织 / 个人及其实控机构）变更' },
+      { value: 'info_scope', label: '对外提供 / 开放使用的信息种类、范围变更' },
+      { value: 'none', label: '暂无变化（仅咨询报告义务）' },
     ],
   },
 ]
