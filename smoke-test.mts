@@ -29,10 +29,10 @@ check('外方+采集',
   { unit_type: 'foreign', resource_kind: 'material_only', material_type: ['whole_blood'], activities: ['collect'] },
   ['foreign-prohibited'])
 
-// 4. 信息对外提供+500例测序 -> 安全审查+事先报告
-check('信息对外+安审',
-  { unit_type: 'chinese', resource_kind: 'info_only', info_type: ['gene'], activities: ['info_out'], info_public: 'no', info_within_coop: 'no', info_security: ['seq500'] },
-  ['info-security', 'info-report'])
+// 4. 信息对外提供（非免报告情形）-> 仅事先报告，细则不再设安全审查结论
+check('信息对外+事先报告',
+  { unit_type: 'chinese', resource_kind: 'info_only', info_type: ['gene'], activities: ['info_out'], info_public: 'no', info_within_coop: 'no', info_publication: 'no', info_overseas_reg: 'no' },
+  ['info-report'])
 
 // 5. 外方仅资助 -> 国际合作豁免
 check('外方仅资助',
@@ -125,9 +125,15 @@ expect2('A1 仅临床数据', { unit_type: 'chinese', resource_kind: 'info_only'
 expect2('A2 已公开数据', { unit_type: 'chinese', resource_kind: 'info_only', info_type: ['gene'], activities: ['info_out'], info_public: 'yes' }, ['info-exempt-public'], ['info-report'])
 // A3 上市临床试验+出境 → 应审批而非备案
 expect2('A3 备案路径+出境', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['whole_blood'], activities: ['coop', 'export'], coop_role: 'substantial', coop_purpose: 'yes', coop_insite: 'yes', coop_exploratory: 'no', export_only_exempt: 'no' }, ['coop-approval', 'export-approval'], ['coop-filing'])
-// A4 备案+探索性 → 备案与探索性审批并存
-expect2('A4 备案+探索性', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['whole_blood'], activities: ['coop'], coop_role: 'substantial', coop_purpose: 'yes', coop_insite: 'yes', coop_exploratory: 'yes' }, ['coop-filing', 'coop-exploratory'])
-// A5 >3000例但上市临床试验 → 采集豁免，不出采集许可
+// A4 备案+探索性 → 备案 + 探索性"无需单独申报"提示（2026 版第 27 条，类型由 approval 改为 notice）
+{
+  const res = evaluate({ unit_type: 'chinese', resource_kind: 'material_only', material_type: ['whole_blood'], activities: ['coop'], coop_role: 'substantial', coop_purpose: 'yes', coop_insite: 'yes', coop_exploratory: 'yes' })
+  const got = res.conclusions.map((c) => c.id)
+  const exp = res.conclusions.find((c) => c.id === 'coop-exploratory')
+  const ok = got.includes('coop-filing') && exp?.type === 'notice'
+  if (ok) { pass++; console.log('PASS A4 备案+探索性无需单独申报') } else { fail++; console.log(`FAIL A4 -> ${got.join(',')}`) }
+}
+// A5 >10000例但上市临床试验 → 采集豁免，不出采集许可（2026 版门槛由 3000 提至 10000）
 expect2('A5 大规模采集临床试验豁免', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['whole_blood'], activities: ['collect'], collect_family: 'no', collect_region: 'no', collect_scale: 'yes', collect_ctrial: 'yes' }, ['collect-exempt-ctrial'], ['collect-approval'])
 // A6 采集+国际合作 → 采集被吸收（以 notice 形式提示，不独立要求许可）
 expect2('A6 采集被国合吸收', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['whole_blood'], activities: ['collect', 'coop'], collect_family: 'yes', collect_region: 'no', collect_scale: 'no', coop_role: 'substantial', coop_purpose: 'no' }, ['coop-approval', 'collect-approval'])
@@ -196,6 +202,56 @@ expect2('A29 事先报告变更', { _flow: 'existing', ch_track: 'report_info', 
 {
   const qs3 = visibleQuestions({ _flow: 'existing', ch_track: 'report_info' }).map((q) => q.id)
   if (!qs3.includes('ch_convert') && qs3.includes('ch_items_info')) { pass++; console.log('PASS A31 事先报告轨道题目匹配') } else { fail++; console.log(`FAIL A31 -> ${qs3.join(',')}`) }
+}
+
+// ── 第六轮：2026 版实施细则换版（国家卫健委令第 16 号）──
+// B1 保藏定义收窄：临床诊疗/教学为主兼顾科研 → 不构成保藏
+expect2('B1 临床型样本库不构成保藏', { unit_type: 'chinese', resource_kind: 'material_only', material_type: ['tissue'], activities: ['bank'], bank_purpose: 'yes' }, ['bank-exempt'], ['bank-approval'])
+// B2 保藏定义不清 → 灰色地带转人工（新题支持 unclear）
+{
+  const res = evaluate({ unit_type: 'chinese', resource_kind: 'material_only', material_type: ['tissue'], activities: ['bank'], bank_purpose: 'unclear' })
+  const ok = res.grayAreas.some((g) => g.question.includes('保藏')) && res.conclusions.length === 1
+  if (ok) { pass++; console.log('PASS B2 保藏判定不清转人工') } else { fail++; console.log(`FAIL B2 -> ${JSON.stringify(res.grayAreas)}`) }
+}
+// B3 论文/会议递交数据 → 视为完成事先报告（第 40 条）
+expect2('B3 论文会议视为已报告', { unit_type: 'chinese', resource_kind: 'info_only', info_type: ['gene'], activities: ['info_out'], info_public: 'no', info_within_coop: 'no', info_publication: 'yes' }, ['info-publication'], ['info-report'])
+// B4 境外上市注册目的 → 免单独报告（第 41 条第 3 款）
+expect2('B4 境外上市注册免报告', { unit_type: 'chinese', resource_kind: 'info_only', info_type: ['gene'], activities: ['info_out'], info_public: 'no', info_within_coop: 'no', info_publication: 'no', info_overseas_reg: 'yes' }, ['info-exempt-reg'], ['info-report'])
+// B5 已公开数据 → 第 41 条免报告（原为 FAQ 口径，现升为法规条文）
+{
+  const res = evaluate({ unit_type: 'chinese', resource_kind: 'info_only', info_type: ['gene'], activities: ['info_out'], info_public: 'yes' })
+  const c = res.conclusions.find((x) => x.id === 'info-exempt-public')
+  const ok = !!c && c.citations.some((ci) => ci.article.includes('第四十一条') && ci.confidence === 'A')
+  if (ok) { pass++; console.log('PASS B5 已公开数据引用新规第41条') } else { fail++; console.log('FAIL B5 已公开数据应引用新规第41条 A级') }
+}
+// B6 法规版本快照：xize 指向 2026 版（16 号令），且不再出现 2023 版
+{
+  const res = evaluate({ unit_type: 'chinese', resource_kind: 'material_only', material_type: ['whole_blood'], activities: ['collect'], collect_family: 'no', collect_region: 'no', collect_scale: 'no' })
+  const names = res.regulations.map((r) => r.name).join(' | ')
+  const ok = names.includes('2026') && names.includes('16 号') && !names.includes('2023')
+  if (ok) { pass++; console.log('PASS B6 法规快照为新16号令') } else { fail++; console.log(`FAIL B6 法规快照 -> ${names}`) }
+}
+// B7 保藏许可申请材料清单与年度报告新内容（第 22、24 条）
+{
+  const res = evaluate({ unit_type: 'chinese', resource_kind: 'material_only', material_type: ['tissue'], activities: ['bank'], bank_purpose: 'no' })
+  const c = res.conclusions.find((x) => x.id === 'bank-approval')
+  const titles = c?.obligations.map((o) => o.title).join(' | ') ?? ''
+  const annual = c?.obligations.find((o) => o.title === '年度报告')
+  const ok = !!c && titles.includes('申请材料清单') && !!annual && annual.deadline.includes('开放共享') && annual.citations.some((ci) => ci.article.includes('第二十四条'))
+  if (ok) { pass++; console.log('PASS B7 保藏材料清单+年报新内容') } else { fail++; console.log(`FAIL B7 -> ${titles}`) }
+}
+// B8 采集门槛 >10000 例（第 16 条）
+{
+  const q = visibleQuestions({ unit_type: 'chinese', resource_kind: 'material_only', material_type: ['whole_blood'], activities: ['collect'] }).find((x) => x.id === 'collect_scale')
+  const ok = !!q && q.text.includes('10000') && !q.text.includes('3000')
+  if (ok) { pass++; console.log('PASS B8 采集门槛10000例') } else { fail++; console.log(`FAIL B8 -> ${q?.text}`) }
+}
+// B9 变更流程：保藏变更选项含申请单位与保藏场所（第 23 条）
+{
+  const q = visibleQuestions({ _flow: 'existing', ch_track: 'approval_bank' }).find((x) => x.id === 'ch_items_bank')
+  const vals = q?.options.map((o) => o.value).join(',') ?? ''
+  const ok = vals.includes('applicant') && vals.includes('site')
+  if (ok) { pass++; console.log('PASS B9 保藏变更新选项') } else { fail++; console.log(`FAIL B9 -> ${vals}`) }
 }
 
 console.log(`\n${pass} passed, ${fail} failed`)

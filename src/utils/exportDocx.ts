@@ -254,7 +254,7 @@ export async function exportReportDocx(result: EvalResult, answers: Answers): Pr
       spacing: { before: 360 },
       children: [
         t(
-          `声明：本报告由规则引擎（v${RULESET_VERSION}，复核日期 ${RULESET_REVIEWED_AT}）基于上文所列法规版本自动生成；受理机关按现行口径统一表述为国家卫生健康委员会（2023 年机构改革后相关职责自科技部划转）。结论置信度分三级：A 为法规条文，B 为主管部门解答口径，C 为实践惯例；B / C 级结论请以法规原文或主管部门意见为准。本报告不构成法律意见。`,
+          `声明：本报告由规则引擎（v${RULESET_VERSION}，复核日期 ${RULESET_REVIEWED_AT}）基于上文所列法规版本自动生成；受理机关为国家卫生健康委员会，省级为省级人民政府人类遗传资源主管部门。结论置信度分三级：A 为法规条文，B 为主管部门解答口径，C 为实践惯例；B / C 级结论请以法规原文或主管部门意见为准。2026-11-11 实施细则换版（国家卫健委令第 16 号）无过渡期，在办事项请以属地主管部门口径为准。本报告不构成法律意见。`,
           { size: SZ.aux, color: COLOR.gray, italics: true },
         ),
       ],
@@ -279,6 +279,19 @@ export async function exportReportDocx(result: EvalResult, answers: Answers): Pr
         footers: {
           default: new Footer({
             children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 40 },
+                children: [
+                  new TextRun({
+                    children: ['出品：庚寅咨询 · Gengyin Consulting　|　青岛庚寅咨询服务有限公司'],
+                    font: FONT,
+                    size: SZ.aux,
+                    color: COLOR.accent,
+                    bold: true,
+                  }),
+                ],
+              }),
               new Paragraph({
                 alignment: AlignmentType.CENTER,
                 children: [

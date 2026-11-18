@@ -244,9 +244,13 @@ export default function ResultView({ result, answers, onRestart }: { result: Eva
         )
       })()}
 
-      <p className="mt-8 text-center text-[11px] leading-5 text-slate-400">
-        本报告由规则引擎（v{RULESET_VERSION}，复核日期 {RULESET_REVIEWED_AT}）基于《人类遗传资源管理条例》（2024 修订）及其实施细则、主管部门常见问题解答自动生成，
-        受理机关统一按现行口径表述为国家卫生健康委员会（原科技部相关职责已划转）。
+      <p className="mt-6 text-center text-[11px] font-medium text-indigo-600">
+        出品 · 庚寅咨询 Gengyin Consulting　|　青岛庚寅咨询服务有限公司
+      </p>
+      <p className="mt-2 text-center text-[11px] leading-5 text-slate-400">
+        本报告由规则引擎（v{RULESET_VERSION}，复核日期 {RULESET_REVIEWED_AT}）基于《人类遗传资源管理条例》（2024 修订）、
+        《人类遗传资源管理条例实施细则》（2026 年国家卫健委令第 16 号）及主管部门常见问题解答自动生成，
+        受理机关为国家卫生健康委员会及省级人民政府人类遗传资源主管部门。细则换版无过渡期，在办事项以属地口径为准。
         本工具为产品原型，结论不构成法律意见。
       </p>
     </div>

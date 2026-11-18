@@ -56,12 +56,13 @@ export default function Home() {
             <div>
               <h1 className="text-sm font-bold leading-4">人遗申报备案评估工具</h1>
               <p className="text-[11px] text-slate-500">人类遗传资源行政许可 / 备案 / 事先报告智能评估（原型）</p>
+              <p className="text-[10px] font-medium text-indigo-600">出品 · 庚寅咨询 Gengyin Consulting</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
             <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-[10px] text-indigo-700">条例 2024 修订</Badge>
-            <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-[10px] text-indigo-700">实施细则 2023</Badge>
-            <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-[10px] text-indigo-700">FAQ 2023.09</Badge>
+            <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-[10px] text-indigo-700">细则 2026 · 16 号令</Badge>
+            <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-[10px] text-indigo-700">FAQ 2025</Badge>
           </div>
         </div>
       </header>
@@ -72,7 +73,7 @@ export default function Home() {
             <h2 className="text-3xl font-bold tracking-tight">10 余道问题，判断你的项目<br />需要哪条人遗申报路径</h2>
             <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-slate-600">
               基于"身份 → 资源 → 活动 → 触发与豁免"四层决策漏斗，覆盖采集许可、保藏许可、国际合作审批 / 临床试验备案、
-              材料出境审批、信息对外提供事先报告与安全审查全部轨道，逐条结论标注法规依据与置信度。
+              材料出境审批、信息对外提供事先报告等全部轨道，逐条结论标注法规依据与置信度。
             </p>
           </div>
 
@@ -115,10 +116,11 @@ export default function Home() {
           <div className="mt-8 flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-5 text-xs leading-5 text-slate-500">
             <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
             <p>
-              规则依据：《中华人民共和国人类遗传资源管理条例》（2024 修订）、《人类遗传资源管理条例实施细则》（2023）、
-              《人类遗传资源管理常见问题解答》（2023.09）。受理机关按现行口径统一为国家卫生健康委员会
-              （2023 年机构改革后相关职责自科技部划转）。结论按"法规条文 / 官方解答口径 / 实践惯例"三级标注置信度；
-              规则覆盖不到的灰色地带将提示转人工咨询。本工具为产品原型，不构成法律意见。
+              规则依据：《中华人民共和国人类遗传资源管理条例》（2024 修订）、《人类遗传资源管理条例实施细则》
+              （2026 年国家卫健委令第 16 号，2026-11-11 施行，旧版第 21 号令同时废止）、《人类遗传资源管理常见问题解答》
+              （2025.03 及之一至之五）。受理机关为国家卫生健康委员会，省级为省级人民政府人类遗传资源主管部门。
+              结论按"法规条文 / 官方解答口径 / 实践惯例"三级标注置信度；规则覆盖不到的灰色地带将提示转人工咨询。
+              细则换版无过渡期，在办事项请以属地主管部门口径为准。本工具为产品原型，不构成法律意见。
             </p>
           </div>
         </main>
@@ -148,6 +150,12 @@ export default function Home() {
           <ResultView result={evaluate(answers)} answers={answers} onRestart={restart} />
         </main>
       )}
+
+      {/* 全局页脚 */}
+      <footer className="border-t border-slate-200 bg-white py-5 text-center print:hidden">
+        <p className="text-xs font-semibold text-slate-700">庚寅咨询 · Gengyin Consulting</p>
+        <p className="mt-0.5 text-[11px] text-slate-400">青岛庚寅咨询服务有限公司　|　CNAS 认可 · ISO 17025/15189/20387 · 人类遗传资源合规咨询</p>
+      </footer>
     </div>
   )
 }
